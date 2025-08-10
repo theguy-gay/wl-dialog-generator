@@ -1,0 +1,54 @@
+{
+    "start": "npcLine1",
+    "npcLines": {
+        "npcLine1": {
+            "text": "I am an NPC!",
+            "duration": 1,
+            "media": "/example/npcLine1.mp3",
+            "animation": "NpcLine1Animation",
+            "camera": {
+                "name": "NPCCamera1",
+                "keepPossessed": true
+            },
+            "hidableGroup": {
+                "name": "NPCLine1Group",
+                "rehide": false
+            },
+            "triggers": "playerChoice1"
+        },
+        "npcLine2a": {
+            "text": "I am still talking A",
+            "duration": 2,
+            "media": "/example/npcLine2a.mp3",
+            "triggers": "npcLine3"
+        },
+        "npcLine2b": {
+            "text": "I am still talking B",
+            "duration": 2,
+            "media": "/example/npcLine2b.mp3",
+            "triggers": "npcLine3"
+        },
+        "npcLine3": {
+            "text": "I am finished talking",
+            "duration": 3,
+            "media": "/example/npcLine3.mp3",
+            "animation": "NpcLine3Animation",
+            "camera": {
+                "name": "NPCCamera3",
+                "keepPossessed": false
+            }
+        }
+    },
+    "playerChoices": {
+        "playerChoice1": [
+            {
+                "text": "I want you to say A",
+                "triggers": "npcLine2a"         
+            },
+            {
+                "text": "I want you to say B",
+                "triggers": "npcLine2b"
+            }
+        ]
+    }
+}

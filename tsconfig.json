@@ -1,0 +1,31 @@
+{
+    "compilerOptions": {
+      "rootDir": ".",
+      "outDir": "build",
+  
+      "target": "ESNext",
+      "lib": ["ESNext"],
+      
+      "moduleResolution": "nodenext",
+      "module": "NodeNext",
+
+      "declaration": false,
+      "declarationMap": false,
+  
+      "resolveJsonModule": true,
+
+      "strict": true,
+      "types": ["wl-typescript", "node"],
+    },
+    "$schema": "https://raw.githubusercontent.com/TypeScriptToLua/TypeScriptToLua/master/tsconfig-schema.json",
+    "tstl": {
+      "noHeader": true,
+      "luaTarget": "5.3",
+      "noImplicitGlobalVariables": true,
+      "noImplicitSelf": true,
+      "tstlVerbose": true,
+      "luaLibImport": "inline",
+      "luaBundle": "bundle.lua",
+      "luaBundleEntry": "src/index.ts"
+    },
+  }

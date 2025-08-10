@@ -1,0 +1,18 @@
+{
+  "name": "wl-dialog-generator",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tstl",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^20.13.0",
+    "typescript": "^5.4.2",
+    "typescript-to-lua": "^1.25.1",
+    "wl-typescript": "file:../wl-typescript",
+    "sized-array": "1.0.1"
+  }
+}

@@ -1,0 +1,256 @@
+import * as dialogJSON from "./dialogs.json"; // Bug in tstl requires a non-default import
+
+interface Camera {
+    name: string,
+    keepPossessed: boolean // Determines if the camera should stay possessed after the dialog.
+}
+
+interface HidableGroup {
+    name: string,
+    rehide: boolean // Determines if the group should hide at the completion of the dialog.
+}
+
+interface NPCLine {
+    text?: string, // Creates a subtitle. If left out the subtitle will be omitted.
+    duration: number, // Duration of the dialog before running the response, also used by properties like the camera and animation if these cause a sandbox object to be created.
+    media?: string, // File path of a media file. Will create a MediaPlayer that plays the file once on trigger. If omitted only no sound will be played.
+    animation?: string, // Name of an AnimationSequence to be played during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name and run un-looped for the duration.
+    camera?: Camera, // Name of a Camera to be possessed during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
+    hidableGroup?: HidableGroup, // Group that will be unhidden during the dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
+    triggers?: string, // Label of another NPCLine or PlayerChoice that should be played upon completion of this NPC line. If empty, ends the dialog.
+}
+
+interface PlayerChoice {
+    text: string,
+    triggers: string // Label of an NPC line that should be played upon this response being selected.
+}
+
+interface Dialogs {
+    start: string; // Label of the PlayerLine or NPCLine to start off this dialog.
+    npcLines: { [npcLineLabel: string]: NPCLine },
+    playerChoices: { [playerLineLabel: string]: PlayerChoice[] }
+}
+
+const dialogs: Dialogs = dialogJSON;
+const { start, npcLines, playerChoices } = dialogs;
+if (!(start in npcLines || start in playerChoices)) {
+}
+
+const forEachNamed = <T>(named: { [name: string]: T }, biconsumer: (name: string, obj: T) => void) => {
+    Object.entries(named).forEach(entry => biconsumer(entry[0], entry[1]));
+}
+
+const spawnObjectUnderParent = (propType: string, name: string, parent: WildLife.SandboxObject): WildLife.SandboxObject => {
+    const newProp = wl_editor_spawn_prop(propType, name);
+    wl_set_object_parent(newProp, parent);
+    return newProp;
+}
+
+
+const rootDialogGroup = wl_editor_spawn_prop("Group", "GeneratedDialogGroup");
+const uiLayer = spawnObjectUnderParent("UILayer", "GeneratedDialogUILayer", rootDialogGroup);
+
+const getTriggerEventFromName = (name: string) => {
+    return `${name}TriggerEvent`;
+}
+
+interface NPCLineEvent {
+    name: string,
+    param?: string
+}
+
+interface NPCLineEventPopulator {
+    (onStartEvents: NPCLineEvent[], onEndEvents: NPCLineEvent[]): void;
+}
+
+const generateNPCLineSubtitle = (lineName: string, text: string): NPCLineEventPopulator  => {
+    const uiText = spawnObjectUnderParent("UIText", `${lineName}Text`, uiLayer);
+    wl_set_object_visibility (uiText, false);
+    const eventName = `${lineName}TextVisibilityEvent`;
+    wl_add_event_to_receiver(uiText, "SetVisibility", eventName, "");
+    wl_set_object_integer_option(uiText, "HorizontalAlignment", 1);
+    wl_set_object_integer_option(uiText, "VerticalAlignment", 2);
+    wl_set_object_float_option(uiText, "PaddingBottom", 100);
+    wl_set_object_string_option(uiText, "Text", text);
+    return (onStartEvents, onEndEvents) => {
+        onStartEvents.push({
+            name: eventName,
+            param: "true"
+        });
+        onEndEvents.push({
+            name: eventName,
+            param: "false"
+        });
+    };
+}
+
+const generateNPCLineMediaPlayer = (lineName: string, parent: WildLife.SandboxObject, path: string): NPCLineEventPopulator => {
+    const mediaPlayer = spawnObjectUnderParent("MediaPlayer", `${lineName}MediaPlayer`, parent);
+    wl_set_object_bool_option(mediaPlayer, "PlayOnLoad", false);
+    wl_set_object_bool_option(mediaPlayer, "EnableCollision", false);
+    wl_set_object_bool_option(mediaPlayer, "Loop", false);
+    wl_set_object_string_option(mediaPlayer, "URL", path);
+    wl_set_object_color_option(mediaPlayer, "ColorMultiplier", { a: 0, r: 1, g: 1, b: 1 });
+    const playEvent = `${lineName}PlayEvent`;
+    wl_add_event_to_receiver(mediaPlayer, "Play", playEvent, "");
+    return (onStartEvents) => {
+        onStartEvents.push({
+            name: playEvent,
+        });
+    };
+}
+
+const generateNPCLineAnimationSequence = (lineName: string, parent: WildLife.SandboxObject, animation: string, duration: number): NPCLineEventPopulator => {
+    let animationSequence = wl_get_object(animation);
+    if (!animationSequence) {
+        animationSequence = spawnObjectUnderParent("AnimationSequence", animation, parent);
+        wl_set_object_float_option(animationSequence, "animationLength", duration);
+    }
+    const animationEvent = `${lineName}AnimationEvent`;
+    wl_add_event_to_receiver(animationSequence, "PlayFromStart", animationEvent, "");
+    return (onStartEvents) => {
+        onStartEvents.push({
+            name: animationEvent,
+        });
+    };
+}
+
+const generateNPCLineCamera = (lineName: string, parent: WildLife.SandboxObject, camera: Camera): NPCLineEventPopulator => {
+    let cameraObj = wl_get_object(camera.name);
+    if (!cameraObj) {
+        cameraObj = spawnObjectUnderParent("Camera", camera.name, parent);
+    }
+    const cameraPossessEvent = `${lineName}PossessEvent`;
+    wl_add_event_to_receiver(cameraObj, "Possess", cameraPossessEvent, "");
+    return (onStartEvents, onEndEvents) => {
+        onStartEvents.push({
+            name: cameraPossessEvent,
+        });
+        if (!camera.keepPossessed) {
+            const cameraUnpoossessEvent = `${lineName}UnpossessEvent`;
+            wl_add_event_to_receiver(cameraObj, "Unpossess", cameraUnpoossessEvent, "");
+            onEndEvents.push({
+                name: cameraUnpoossessEvent,
+            });
+        }
+    };
+}
+
+const generateNPCLineHidableGroup = (lineName: string, parent: WildLife.SandboxObject, hidableGroup: HidableGroup): NPCLineEventPopulator => {
+    let group = wl_get_object(hidableGroup.name);
+    if (!group) {
+        group = spawnObjectUnderParent("Group", hidableGroup.name, parent);
+    }
+    const visibilityEventName = `${lineName}HidableGroupVisibilityEvent`;
+    wl_add_event_to_receiver(group, "SetVisibilityBelow", visibilityEventName, "");
+    return (onStartEvents, onEndEvents) => {
+        onStartEvents.push({
+            name: visibilityEventName,
+            param: "true"
+        });
+        if (hidableGroup.rehide) {
+            onEndEvents.push({
+                name: visibilityEventName,
+                param: "false"
+            });
+        }
+    };
+}
+
+const generateNPCLineDelay = (lineName: string, parent: WildLife.SandboxObject, duration: number, onEndEvents: NPCLineEvent[]): NPCLineEventPopulator => {
+    const delay = spawnObjectUnderParent("Delay", `${lineName}NPCLineDelay`, parent);
+    wl_set_object_float_option(delay, "DelaySeconds", duration);
+    onEndEvents.forEach(event => {
+        wl_add_event_to_dispatcher(delay, "OnTimerDone", event.name, event.param || "");
+    });
+    const runDelayEvent = `${lineName}DelayRunEvent`;
+    wl_add_event_to_receiver(delay, "Run", runDelayEvent, "");
+    return (onStartEvents) => {
+        onStartEvents.push({
+            name: runDelayEvent
+        });
+    };
+}
+
+const generateNPCLineEventFunction = (lineName: string, parent: WildLife.SandboxObject, onStartEvents: NPCLineEvent[]) => {
+    const eventFunction = spawnObjectUnderParent("EventFunction", `${lineName}NPCLineEventFunction`, parent);
+    wl_add_event_to_receiver(eventFunction, "Run", getTriggerEventFromName(lineName), "");
+    onStartEvents.forEach(event => wl_add_event_to_dispatcher(eventFunction, "Events", event.name, event.param || ""));
+}
+
+const generateWLNPCLine = (lineName: string, npcLine: NPCLine) => {
+    const npcLineGroup = spawnObjectUnderParent("Group", `${lineName}NPCLine`, rootDialogGroup);
+    const onStartEvents: NPCLineEvent[] = [];
+    const onEndEvents: NPCLineEvent[] = npcLine.triggers ?  [{ name: getTriggerEventFromName(npcLine.triggers) }] : [];
+    npcLine.text && generateNPCLineSubtitle(lineName, npcLine.text)(onStartEvents, onEndEvents);
+    npcLine.media && generateNPCLineMediaPlayer(lineName, npcLineGroup, npcLine.media)(onStartEvents, onEndEvents);
+    npcLine.animation && generateNPCLineAnimationSequence(lineName, npcLineGroup, npcLine.animation, npcLine.duration)(onStartEvents, onEndEvents);
+    npcLine.camera && generateNPCLineCamera(lineName, npcLineGroup, npcLine.camera)(onStartEvents, onEndEvents);
+    npcLine.hidableGroup && generateNPCLineHidableGroup(lineName, npcLineGroup, npcLine.hidableGroup)(onStartEvents, onEndEvents);
+    generateNPCLineDelay(lineName, npcLineGroup, npcLine.duration, onEndEvents)(onStartEvents, onEndEvents);
+    generateNPCLineEventFunction(lineName, npcLineGroup, onStartEvents);
+}
+
+const numberToKeyWord = (num: number) => {
+  switch (num) {
+    case 1: return "One";
+    case 2: return "Two";
+    case 3: return "Three";
+    case 4: return "Four";
+    case 5: return "Five";
+    case 6: return "Six";
+    case 7: return "Seven";
+    case 8: return "Eight";
+    case 9: return "Nine";
+    case 10: return "Zero";
+    default:
+      return "Number out of range";
+  }
+}
+
+const generatePlayerChoiceEventExecuter = (choiceName: string, visibilityEventName: string) => {
+    const eventExecuter = spawnObjectUnderParent("EventExecuter", `${choiceName}PlayerChoiceEventExecuter`, rootDialogGroup);
+    wl_set_object_string_option(eventExecuter, "EventName", visibilityEventName);
+    wl_set_object_string_option(eventExecuter, "eventValue", "true");
+    wl_add_event_to_receiver(eventExecuter, "ExecuteEvent", getTriggerEventFromName(choiceName), "");
+}
+
+const generatePlayerChoiceButton = (choiceName: string, index: number, playerChoice: PlayerChoice, parent: WildLife.SandboxObject, visibilityEventName: string) => {
+    const uiButton = spawnObjectUnderParent("UIButton", `${choiceName}${index}Button`, parent);
+    wl_set_object_integer_option(uiButton, "HorizontalAlignment", 3);
+    wl_set_object_integer_option(uiButton, "VerticalAlignment", 0);
+    wl_add_event_to_dispatcher(uiButton, "OnButtonClicked", getTriggerEventFromName(playerChoice.triggers), "");
+    wl_add_event_to_dispatcher(uiButton, "OnButtonClicked", visibilityEventName, "false");
+    const input = spawnObjectUnderParent("Input", `${choiceName}${index}Input`, uiButton);
+    wl_set_object_string_option(input, "Key", numberToKeyWord(index));
+    wl_set_object_bool_option(input, "ConsumeInput", true);
+    wl_add_event_to_dispatcher(input, "OnKeyPressed", getTriggerEventFromName(playerChoice.triggers), "");
+    wl_add_event_to_dispatcher(input, "OnKeyPressed", visibilityEventName, "false");
+    wl_add_event_to_receiver(input, "SetVisibility", visibilityEventName, "");
+    wl_set_object_visibility (input, false);
+    const uiText = spawnObjectUnderParent("UIText", `${choiceName}${index}Text`, uiButton);
+    wl_set_object_integer_option(uiText, "HorizontalAlignment", 1);
+    wl_set_object_integer_option(uiText, "VerticalAlignment", 0);
+    wl_set_object_string_option(uiText, "Text", `${index}: ${playerChoice.text}`);
+}
+
+const generateWLPlayerChoices = (choiceName: string, playerChoice: PlayerChoice[]) => {
+    const uiVerticalBox = spawnObjectUnderParent("UIVerticalBox", `${choiceName}PlayerChoiceVericalBox`, uiLayer);
+    wl_set_object_visibility (uiVerticalBox, false);
+    const visibilityEventName = `${choiceName}PlayerChoiceVisibilityEvent`;
+    generatePlayerChoiceEventExecuter(choiceName, visibilityEventName);
+    wl_add_event_to_receiver(uiVerticalBox, "SetVisibility", visibilityEventName, "");
+    wl_set_object_integer_option(uiVerticalBox, "HorizontalAlignment", 2);
+    wl_set_object_integer_option(uiVerticalBox, "VerticalAlignment", 1);
+    playerChoice.forEach((playerChoice, index) => {
+        generatePlayerChoiceButton(choiceName, index + 1, playerChoice, uiVerticalBox, visibilityEventName);
+    });
+}
+
+forEachNamed(npcLines, generateWLNPCLine);
+forEachNamed(playerChoices, generateWLPlayerChoices);
+
+const eventExecuter = spawnObjectUnderParent("EventExecuter", `StartDialogEventExecuter`, rootDialogGroup);
+wl_set_object_string_option(eventExecuter, "EventName", getTriggerEventFromName(dialogs.start));
+wl_set_object_string_option(eventExecuter, "eventValue", "");
+wl_add_event_to_receiver(eventExecuter, "ExecuteEvent", "DialogStartEvent", "");
