@@ -13,7 +13,7 @@ interface HidableGroup {
 interface NPCLine {
     text?: string, // Creates a subtitle. If left out the subtitle will be omitted.
     duration: number, // Duration of the dialog before running the response, also used by properties like the camera and animation if these cause a sandbox object to be created.
-    media?: string, // File path of a media file. Will create a MediaPlayer that plays the file once on trigger. If omitted only no sound will be played.
+    media?: string | string[], // File path of a media file(s). Will create a MediaPlayer that plays the file once on trigger. If omitted only no sound will be played. If an array is provided, one will be chosen at random to be played.
     animation?: string, // Name of an AnimationSequence to be played during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name and run un-looped for the duration.
     camera?: Camera, // Name of a Camera to be possessed during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
     hidableGroup?: HidableGroup, // Group that will be unhidden during the dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
@@ -42,12 +42,18 @@ const forEachNamed = <T>(named: { [name: string]: T }, biconsumer: (name: string
 
 const spawnObjectUnderParent = (propType: string, name: string, parent: WildLife.SandboxObject): WildLife.SandboxObject => {
     const newProp = wl_editor_spawn_prop(propType, name);
+    if (!newProp) {
+        throw `Failed to make child prop ${name} of type ${propType}`
+    }
     wl_set_object_parent(newProp, parent);
     return newProp;
 }
 
 
 const rootDialogGroup = wl_editor_spawn_prop("Group", "GeneratedDialogGroup");
+if (!rootDialogGroup) {
+    throw `Failed to create root group`
+}
 const uiLayer = spawnObjectUnderParent("UILayer", "GeneratedDialogUILayer", rootDialogGroup);
 
 const getTriggerEventFromName = (name: string) => {
@@ -84,11 +90,44 @@ const generateNPCLineSubtitle = (lineName: string, text: string): NPCLineEventPo
     };
 }
 
+const generateNPCLineMediaPlayerOrRandomMediaPlayer = (lineName: string, parent: WildLife.SandboxObject, path: string | string[]): NPCLineEventPopulator  => {
+    if (typeof path === "string") {
+        return generateNPCLineMediaPlayer(lineName, parent, path);
+    } else {
+        const stringCombiner = spawnObjectUnderParent("StringCombiner", `${lineName}MediaStringCombiner`, parent);
+        wl_set_object_string_option(stringCombiner, "StringB", `${lineName}PlayEvent`);
+        wl_add_event_to_receiver(stringCombiner, "changeStringAAndCombine", `${lineName}NumberChosenMediaPlayEvent`, "");
+        wl_add_event_to_dispatcher(stringCombiner, "onStringCombined", `${lineName}EventChosenMediaPlayEvent`, "");
+
+        const eventExecuter = spawnObjectUnderParent("EventExecuter", `${lineName}RandomMediaEventExecuter`, parent);
+        wl_add_event_to_receiver(eventExecuter, "executeEventWithName", `${lineName}EventChosenMediaPlayEvent`, "");
+
+        const random = spawnObjectUnderParent("RandomNumber", `${lineName}RandomMediaPlayer`, parent);
+        wl_set_object_bool_option(random, "OnlyWholeNumbers", true);
+        let i = 0;
+        wl_set_object_integer_option(random, "RangeMin", i);
+        while (i < path.length) {
+            generateNPCLineMediaPlayer(`${i}${lineName}`, parent, path[i]);
+            i++;
+        }
+        wl_set_object_integer_option(random, "RangeMax", i);
+        wl_add_event_to_receiver(random, "Run", `${lineName}PlayEvent`, "");
+        wl_add_event_to_dispatcher(random, "onRandomNumberGenerated", `${lineName}NumberChosenMediaPlayEvent`, "");
+
+        return (onStartEvents) => {
+            onStartEvents.push({
+                name: `${lineName}PlayEvent`,
+            });
+        };
+    }
+}
+
 const generateNPCLineMediaPlayer = (lineName: string, parent: WildLife.SandboxObject, path: string): NPCLineEventPopulator => {
     const mediaPlayer = spawnObjectUnderParent("MediaPlayer", `${lineName}MediaPlayer`, parent);
     wl_set_object_bool_option(mediaPlayer, "PlayOnLoad", false);
     wl_set_object_bool_option(mediaPlayer, "EnableCollision", false);
     wl_set_object_bool_option(mediaPlayer, "Loop", false);
+    wl_set_object_bool_option(mediaPlayer, "Enable3DSound", false);
     wl_set_object_string_option(mediaPlayer, "URL", path);
     wl_set_object_color_option(mediaPlayer, "ColorMultiplier", { a: 0, r: 1, g: 1, b: 1 });
     const playEvent = `${lineName}PlayEvent`;
@@ -183,7 +222,7 @@ const generateWLNPCLine = (lineName: string, npcLine: NPCLine) => {
     const onStartEvents: NPCLineEvent[] = [];
     const onEndEvents: NPCLineEvent[] = npcLine.triggers ?  [{ name: getTriggerEventFromName(npcLine.triggers) }] : [];
     npcLine.text && generateNPCLineSubtitle(lineName, npcLine.text)(onStartEvents, onEndEvents);
-    npcLine.media && generateNPCLineMediaPlayer(lineName, npcLineGroup, npcLine.media)(onStartEvents, onEndEvents);
+    npcLine.media && generateNPCLineMediaPlayerOrRandomMediaPlayer(lineName, npcLineGroup, npcLine.media)(onStartEvents, onEndEvents);
     npcLine.animation && generateNPCLineAnimationSequence(lineName, npcLineGroup, npcLine.animation, npcLine.duration)(onStartEvents, onEndEvents);
     npcLine.camera && generateNPCLineCamera(lineName, npcLineGroup, npcLine.camera)(onStartEvents, onEndEvents);
     npcLine.hidableGroup && generateNPCLineHidableGroup(lineName, npcLineGroup, npcLine.hidableGroup)(onStartEvents, onEndEvents);
