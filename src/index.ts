@@ -1,3 +1,4 @@
+import { CharacterAnimation, populateCharacterAnimation } from "./characterAnimation";
 import * as dialogJSON from "./dialogs.json"; // Bug in tstl requires a non-default import
 
 interface Camera {
@@ -14,7 +15,7 @@ interface NPCLine {
     text?: string, // Creates a subtitle. If left out the subtitle will be omitted.
     duration: number, // Duration of the dialog before running the response, also used by properties like the camera and animation if these cause a sandbox object to be created.
     media?: string | string[], // File path of a media file(s). Will create a MediaPlayer that plays the file once on trigger. If omitted only no sound will be played. If an array is provided, one will be chosen at random to be played.
-    animation?: string, // Name of an AnimationSequence to be played during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name and run un-looped for the duration.
+    animation?: string | CharacterAnimation, // Name of an AnimationSequence to be played during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name and run un-looped for the duration.
     camera?: Camera, // Name of a Camera to be possessed during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
     hidableGroup?: HidableGroup, // Group that will be unhidden during the dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
     triggers?: string, // Label of another NPCLine or PlayerChoice that should be played upon completion of this NPC line. If empty, ends the dialog.
@@ -139,11 +140,15 @@ const generateNPCLineMediaPlayer = (lineName: string, parent: WildLife.SandboxOb
     };
 }
 
-const generateNPCLineAnimationSequence = (lineName: string, parent: WildLife.SandboxObject, animation: string, duration: number): NPCLineEventPopulator => {
-    let animationSequence = wl_get_object(animation);
+const generateNPCLineAnimationSequence = (lineName: string, parent: WildLife.SandboxObject, animation: string | CharacterAnimation, duration: number): NPCLineEventPopulator => {
+    const animationName = typeof animation === "string" ? animation : animation.name;
+    let animationSequence = wl_get_object(animationName);
     if (!animationSequence) {
-        animationSequence = spawnObjectUnderParent("AnimationSequence", animation, parent);
+        animationSequence = spawnObjectUnderParent("AnimationSequence", animationName, parent);
         wl_set_object_float_option(animationSequence, "animationLength", duration);
+    }
+    if (typeof animation !== "string") {
+        populateCharacterAnimation(animationSequence, animation);
     }
     const animationEvent = `${lineName}AnimationEvent`;
     wl_add_event_to_receiver(animationSequence, "PlayFromStart", animationEvent, "");
