@@ -1,44 +1,13 @@
-import { CharacterAnimation, populateCharacterAnimation } from "./characterAnimation";
-import * as dialogJSON from "./dialogs.json"; // Bug in tstl requires a non-default import
+import { populateCharacterAnimation } from "./characterAnimation";
+import { Dialogs, NPCLineEventPopulator, CharacterAnimation, Camera, HidableGroup, NPCLineEvent, NPCLine, PlayerChoice } from "./types";
+import { numberToKeyWord, forEachNamed, getTriggerEventFromName } from "./utils";
+import { decode } from "../lua_sources/json";
 
-interface Camera {
-    name: string,
-    keepPossessed: boolean // Determines if the camera should stay possessed after the dialog.
-}
+const dialogs = decode(wl_get_call_argument_as_string()) as Dialogs;
 
-interface HidableGroup {
-    name: string,
-    rehide: boolean // Determines if the group should hide at the completion of the dialog.
-}
-
-interface NPCLine {
-    text?: string, // Creates a subtitle. If left out the subtitle will be omitted.
-    duration: number, // Duration of the dialog before running the response, also used by properties like the camera and animation if these cause a sandbox object to be created.
-    media?: string | string[], // File path of a media file(s). Will create a MediaPlayer that plays the file once on trigger. If omitted only no sound will be played. If an array is provided, one will be chosen at random to be played.
-    animation?: string | CharacterAnimation, // Name of an AnimationSequence to be played during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name and run un-looped for the duration.
-    camera?: Camera, // Name of a Camera to be possessed during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
-    hidableGroup?: HidableGroup, // Group that will be unhidden during the dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
-    triggers?: string, // Label of another NPCLine or PlayerChoice that should be played upon completion of this NPC line. If empty, ends the dialog.
-}
-
-interface PlayerChoice {
-    text: string,
-    triggers: string // Label of an NPC line that should be played upon this response being selected.
-}
-
-interface Dialogs {
-    start: string; // Label of the PlayerLine or NPCLine to start off this dialog.
-    npcLines: { [npcLineLabel: string]: NPCLine },
-    playerChoices: { [playerLineLabel: string]: PlayerChoice[] }
-}
-
-const dialogs: Dialogs = dialogJSON;
 const { start, npcLines, playerChoices } = dialogs;
 if (!(start in npcLines || start in playerChoices)) {
-}
-
-const forEachNamed = <T>(named: { [name: string]: T }, biconsumer: (name: string, obj: T) => void) => {
-    Object.entries(named).forEach(entry => biconsumer(entry[0], entry[1]));
+    throw `No start provided for dialog`;
 }
 
 const spawnObjectUnderParent = (propType: string, name: string, parent: WildLife.SandboxObject): WildLife.SandboxObject => {
@@ -50,25 +19,11 @@ const spawnObjectUnderParent = (propType: string, name: string, parent: WildLife
     return newProp;
 }
 
-
 const rootDialogGroup = wl_editor_spawn_prop("Group", "GeneratedDialogGroup");
 if (!rootDialogGroup) {
     throw `Failed to create root group`
 }
 const uiLayer = spawnObjectUnderParent("UILayer", "GeneratedDialogUILayer", rootDialogGroup);
-
-const getTriggerEventFromName = (name: string) => {
-    return `${name}TriggerEvent`;
-}
-
-interface NPCLineEvent {
-    name: string,
-    param?: string
-}
-
-interface NPCLineEventPopulator {
-    (onStartEvents: NPCLineEvent[], onEndEvents: NPCLineEvent[]): void;
-}
 
 const generateNPCLineSubtitle = (lineName: string, text: string): NPCLineEventPopulator  => {
     const uiText = spawnObjectUnderParent("UIText", `${lineName}Text`, uiLayer);
@@ -233,23 +188,6 @@ const generateWLNPCLine = (lineName: string, npcLine: NPCLine) => {
     npcLine.hidableGroup && generateNPCLineHidableGroup(lineName, npcLineGroup, npcLine.hidableGroup)(onStartEvents, onEndEvents);
     generateNPCLineDelay(lineName, npcLineGroup, npcLine.duration, onEndEvents)(onStartEvents, onEndEvents);
     generateNPCLineEventFunction(lineName, npcLineGroup, onStartEvents);
-}
-
-const numberToKeyWord = (num: number) => {
-  switch (num) {
-    case 1: return "One";
-    case 2: return "Two";
-    case 3: return "Three";
-    case 4: return "Four";
-    case 5: return "Five";
-    case 6: return "Six";
-    case 7: return "Seven";
-    case 8: return "Eight";
-    case 9: return "Nine";
-    case 10: return "Zero";
-    default:
-      return "Number out of range";
-  }
 }
 
 const generatePlayerChoiceEventExecuter = (choiceName: string, visibilityEventName: string) => {

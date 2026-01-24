@@ -1,15 +1,4 @@
-interface BodyAnimationStage {
-    startAnimation: number,
-    startTime: number,
-    endAnimation: number,
-    endTime: number
-}
-
-export interface CharacterAnimation {
-    name: string,
-    posePropName: string,
-    bodyAnimationStages?: BodyAnimationStage[],
-}
+import { CharacterAnimation, BodyAnimationStage } from "./types";
 
 export const populateCharacterAnimation = (animation: WildLife.SandboxObject, characterAnimation: CharacterAnimation): void => {
     const poseProp = wl_get_object(characterAnimation.posePropName);
