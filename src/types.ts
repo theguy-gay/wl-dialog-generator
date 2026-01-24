@@ -43,7 +43,9 @@ export interface BodyAnimationStage {
     startAnimation: number,
     startTime: number,
     endAnimation: number,
-    endTime: number
+    endTime: number,
+    disableChestPhysics?: boolean,
+    disableButtPhysics?: boolean,
 }
 
 export interface CharacterAnimation {

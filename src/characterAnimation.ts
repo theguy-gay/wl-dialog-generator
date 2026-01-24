@@ -8,7 +8,7 @@ export const populateCharacterAnimation = (animation: WildLife.SandboxObject, ch
     const poseGUID = wl_get_object_guid(poseProp);
     const poseTrack = wl_animation_object_track_get(animation, poseGUID);
 
-    characterAnimation.bodyAnimationStages && createBodyAnimationStages(animation, poseGUID, poseTrack, characterAnimation.bodyAnimationStages, characterAnimation.replaceBodyAnimations);
+    characterAnimation.bodyAnimationStages && createBodyAnimationStages(animation, poseGUID, poseTrack, characterAnimation.bodyAnimationStages, !!characterAnimation.replaceBodyAnimations);
 }
 
 const createBodyAnimationStages = (animation: WildLife.SandboxObject, poseGUID: string, poseTrack: WildLife.ObjectTrack, bodyAnimationStages: BodyAnimationStage[], replaceBodyAnimations: boolean): void => {
@@ -20,6 +20,8 @@ const createBodyAnimationStages = (animation: WildLife.SandboxObject, poseGUID: 
         wl_animation_keyframe_track_add(animation, poseTrack.guid, "bodyAnimationAIndex", "Int");
         wl_animation_keyframe_track_add(animation, poseTrack.guid, "bodyAnimationBIndex", "Int");
         wl_animation_keyframe_track_add(animation, poseTrack.guid, "bodyAnimationBlend", "Float");
+        wl_animation_keyframe_track_add(animation, poseTrack.guid, "enableButtPhysics", "Bool");
+        wl_animation_keyframe_track_add(animation, poseTrack.guid, "enableChestPhysics", "Bool");
 
         let startA = true;
 
@@ -28,6 +30,8 @@ const createBodyAnimationStages = (animation: WildLife.SandboxObject, poseGUID: 
             wl_animation_keyframe_add(animation, poseGUID, startA ? "bodyAnimationBIndex" : "bodyAnimationAIndex", bodyAnimationStage.startTime, bodyAnimationStage.endAnimation);
             wl_animation_keyframe_add(animation, poseGUID, "bodyAnimationBlend", bodyAnimationStage.startTime, startA ? 0 : 1);
             wl_animation_keyframe_add(animation, poseGUID, "bodyAnimationBlend", bodyAnimationStage.endTime, startA ? 1 : 0);
+            wl_animation_keyframe_add(animation, poseTrack.guid, "enableButtPhysics",  bodyAnimationStage.startTime, !bodyAnimationStage.disableButtPhysics);
+            wl_animation_keyframe_add(animation, poseTrack.guid, "enableChestPhysics",  bodyAnimationStage.startTime, !bodyAnimationStage.disableButtPhysics);
             startA = !startA;
         });
 }
