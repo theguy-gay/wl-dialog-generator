@@ -19,7 +19,14 @@ const spawnObjectUnderParent = (propType: string, name: string, parent: WildLife
     return newProp;
 }
 
-const rootDialogGroup = wl_editor_spawn_prop("Group", "GeneratedDialogGroup");
+let rootDialogGroup;
+if (dialogs.replace) {
+    rootDialogGroup = wl_get_object("GeneratedDialogGroup");
+    if (rootDialogGroup) {
+        wl_editor_delete_object(rootDialogGroup);
+    }
+}
+rootDialogGroup = wl_editor_spawn_prop("Group", "GeneratedDialogGroup");
 if (!rootDialogGroup) {
     throw `Failed to create root group`
 }

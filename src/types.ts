@@ -25,6 +25,7 @@ export interface PlayerChoice {
 
 export interface Dialogs {
     start: string; // Label of the PlayerLine or NPCLine to start off this dialog.
+    replace?: boolean;
     npcLines: { [npcLineLabel: string]: NPCLine },
     playerChoices: { [playerLineLabel: string]: PlayerChoice[] }
 }
@@ -49,4 +50,5 @@ export interface CharacterAnimation {
     name: string,
     posePropName: string,
     bodyAnimationStages?: BodyAnimationStage[],
+    replaceBodyAnimations?: boolean
 }
