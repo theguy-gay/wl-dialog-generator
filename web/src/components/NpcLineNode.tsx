@@ -9,7 +9,7 @@ import { FieldLabel } from './FieldLabel';
 import { tooltips } from '../utils/fieldTooltips';
 
 export function NpcLineNode({ id, data }: NodeProps) {
-  const { updateNodeData, deleteElements, setEdges } = useReactFlow();
+  const { updateNodeData, deleteElements, setEdges, getEdges } = useReactFlow();
   const rename = useRenameNode(id, 'npcLine');
 
   const camera = data.camera as Camera | undefined;
@@ -21,7 +21,9 @@ export function NpcLineNode({ id, data }: NodeProps) {
     : data.media ? [data.media as string] : [];
   const [mediaOpen, setMediaOpen] = useState(mediaArr.length > 0);
 
-  const [triggersOpen, setTriggersOpen] = useState(data.triggers !== undefined);
+  const [triggersOpen, setTriggersOpen] = useState(
+    () => data.triggers !== undefined || getEdges().some(e => e.source === id)
+  );
 
   // Animation mode toggle
   const animIsObject = typeof data.animation === 'object' && data.animation !== null;
