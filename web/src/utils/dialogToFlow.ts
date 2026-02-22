@@ -18,7 +18,7 @@ function computeTreeLayout(
   edges: Edge[],
   startId: string,
 ): Map<string, { x: number; y: number }> {
-  const X_SPACING = 320;
+  const X_SPACING = 500;
   const Y_SPACING = 300;
 
   // Build adjacency list (source → [targets])
@@ -55,11 +55,11 @@ function computeTreeLayout(
 
   const positions = new Map<string, { x: number; y: number }>();
   for (const [lv, ids] of groups) {
-    const totalWidth = (ids.length - 1) * X_SPACING;
+    const totalHeight = (ids.length - 1) * Y_SPACING;
     ids.forEach((id, i) => {
       positions.set(id, {
-        x: -totalWidth / 2 + i * X_SPACING,
-        y: lv * Y_SPACING,
+        x: lv * X_SPACING,
+        y: -totalHeight / 2 + i * Y_SPACING,
       });
     });
   }
@@ -134,6 +134,7 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
       edges.push({
         id: `edge-playerChoice-${label}-${i}-to-${choice.triggers}`,
         source: `playerChoice-${label}`,
+        sourceHandle: `choice-${i}`,
         target: `npcLine-${choice.triggers}`,
         markerEnd: arrow,
         data: { choiceIndex: i },

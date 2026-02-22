@@ -34,7 +34,7 @@ export function NpcLineNode({ id, data }: NodeProps) {
 
   return (
     <div className="dialog-node">
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Left} />
 
       <div className="node-header node-header-npc">{data._label as string}</div>
 
@@ -128,7 +128,7 @@ export function NpcLineNode({ id, data }: NodeProps) {
         )}
       </div>
 
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={Position.Right} />
     </div>
   );
 }

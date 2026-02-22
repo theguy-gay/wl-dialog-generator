@@ -13,13 +13,13 @@ export function PlayerChoiceNode({ id, data }: NodeProps) {
 
   return (
     <div className="dialog-node">
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Left} />
 
       <div className="node-header node-header-choice">{data._label as string}</div>
 
       <div className="node-fields">
         {choices.map((choice, i) => (
-          <div className="node-field" key={i}>
+          <div className="node-field node-choice-row" key={i}>
             <label>Choice {i + 1}</label>
             <input
               className="nodrag"
@@ -27,11 +27,14 @@ export function PlayerChoiceNode({ id, data }: NodeProps) {
               value={choice.text}
               onChange={e => onChoiceTextChange(i, e.target.value)}
             />
+            <Handle
+              type="source"
+              position={Position.Right}
+              id={`choice-${i}`}
+            />
           </div>
         ))}
       </div>
-
-      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 }

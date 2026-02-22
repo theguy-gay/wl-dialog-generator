@@ -19,10 +19,23 @@ export function flowToDialog(nodes: Node[], edges: Edge[], replace?: boolean): D
   if (!startNode) throw new Error('No start node found in flow');
   const start = stripPrefix(startNode.id);
 
+  // BFS to find all nodes reachable from start — orphans are excluded from export
+  const reachable = new Set<string>();
+  const queue: string[] = [startNode.id];
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    if (reachable.has(cur)) continue;
+    reachable.add(cur);
+    for (const edge of outgoingEdges.get(cur) ?? []) {
+      queue.push(edge.target);
+    }
+  }
+
   const npcLines: { [label: string]: NPCLine } = {};
   const playerChoices: { [label: string]: PlayerChoice[] } = {};
 
   for (const node of nodes) {
+    if (!reachable.has(node.id)) continue;
     const data = node.data;
     const label = stripPrefix(node.id);
 
@@ -53,20 +66,27 @@ export function flowToDialog(nodes: Node[], edges: Edge[], replace?: boolean): D
 
     } else if (data._type === 'playerChoice') {
       const choiceTexts = data.choices as Array<{ text: string }>;
-      const outEdges = (outgoingEdges.get(node.id) ?? [])
-        .slice()
-        .sort((a, b) => {
-          const ai = (a.data?.choiceIndex as number) ?? 0;
-          const bi = (b.data?.choiceIndex as number) ?? 0;
-          return ai - bi;
-        });
+      const outEdges = outgoingEdges.get(node.id) ?? [];
 
-      const choices: PlayerChoice[] = choiceTexts.map((ct, i) => ({
-        text: ct.text,
-        triggers: stripPrefix(outEdges[i].target),
-      }));
+      const getChoiceIdx = (e: Edge): number => {
+        if (typeof e.sourceHandle === 'string' && e.sourceHandle.startsWith('choice-')) {
+          const n = parseInt(e.sourceHandle.slice('choice-'.length), 10);
+          if (!isNaN(n)) return n;
+        }
+        return (e.data?.choiceIndex as number) ?? -1;
+      };
 
-      playerChoices[label] = choices;
+      const choices: PlayerChoice[] = choiceTexts
+        .map((ct, i) => {
+          const edge = outEdges.find(e => getChoiceIdx(e) === i);
+          if (!edge) return null;
+          return { text: ct.text, triggers: stripPrefix(edge.target) };
+        })
+        .filter((c): c is PlayerChoice => c !== null);
+
+      if (choices.length > 0) {
+        playerChoices[label] = choices;
+      }
     }
   }
 

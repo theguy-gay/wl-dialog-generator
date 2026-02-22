@@ -18,25 +18,102 @@ body {
 }
 
 .app-header {
-  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1.5rem;
   background-color: #16213e;
   border-bottom: 1px solid #0f3460;
   flex-shrink: 0;
 }
 
-.app-header h1 {
-  font-size: 1.4rem;
+.app-title h1 {
+  font-size: 1.2rem;
   font-weight: 600;
   color: #e94560;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
 }
 
-.app-header p {
-  font-size: 0.85rem;
+.app-title p {
+  font-size: 0.8rem;
   color: #888;
+}
+
+.app-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-btn {
+  padding: 6px 14px;
+  background: #0f1923;
+  border: 1px solid #2a3a4a;
+  color: #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.toolbar-btn:hover {
+  background: #1e2a3a;
+  border-color: #4a9eff;
+}
+
+.toolbar-btn-primary {
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.toolbar-btn-primary:hover {
+  background: #e94560;
+  color: #fff;
 }
 
 .app-main {
   flex: 1;
   overflow: hidden;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolbar-btn-primary:disabled:hover {
+  background: transparent;
+  color: #e94560;
+}
+
+.error-panel {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: #1e1a2e;
+  border: 1px solid #e94560;
+  border-radius: 6px;
+  padding: 10px 14px;
+  max-width: 360px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.error-panel-title {
+  color: #e94560;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.error-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.error-item {
+  color: #ffaaaa;
+  font-size: 11px;
 }

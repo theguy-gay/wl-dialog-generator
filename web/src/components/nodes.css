@@ -74,3 +74,8 @@
   border-top: 1px solid #0f3460;
   margin: 4px 0;
 }
+
+.node-choice-row {
+  position: relative;
+  padding-right: 14px;
+}
