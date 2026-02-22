@@ -1,0 +1,76 @@
+.dialog-node {
+  background: #1e2a3a;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  min-width: 260px;
+  font-size: 12px;
+  color: #e0e0e0;
+}
+
+.node-header {
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid #0f3460;
+  border-radius: 6px 6px 0 0;
+  cursor: grab;
+  user-select: none;
+}
+
+.node-header-npc {
+  background: #1a1a2e;
+  border-top: 3px solid #e94560;
+}
+
+.node-header-choice {
+  background: #1a2a1a;
+  border-top: 3px solid #4a9eff;
+}
+
+.node-fields {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.node-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.node-field label {
+  width: 100px;
+  flex-shrink: 0;
+  color: #888;
+  font-size: 11px;
+}
+
+.node-field input[type="text"],
+.node-field input[type="number"] {
+  flex: 1;
+  background: #0f1923;
+  border: 1px solid #2a3a4a;
+  color: #e0e0e0;
+  padding: 3px 6px;
+  border-radius: 3px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.node-field input[type="text"]:focus,
+.node-field input[type="number"]:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.node-field input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.node-section-divider {
+  border: none;
+  border-top: 1px solid #0f3460;
+  margin: 4px 0;
+}
