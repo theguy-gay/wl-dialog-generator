@@ -9,8 +9,8 @@ export interface HidableGroup {
 }
 
 export interface NPCLine {
-    text?: string, // Creates a subtitle. If left out the subtitle will be omitted.
     duration: number, // Duration of the dialog before running the response, also used by properties like the camera and animation if these cause a sandbox object to be created.
+    text?: string, // Creates a subtitle. If left out the subtitle will be omitted.
     media?: string | string[], // File path of a media file(s). Will create a MediaPlayer that plays the file once on trigger. If omitted only no sound will be played. If an array is provided, one will be chosen at random to be played.
     animation?: string | CharacterAnimation, // Name of an AnimationSequence to be played during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name and run un-looped for the duration.
     camera?: Camera, // Name of a Camera to be possessed during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
@@ -25,9 +25,9 @@ export interface PlayerChoice {
 
 export interface Dialogs {
     start: string; // Label of the PlayerLine or NPCLine to start off this dialog.
-    replace?: boolean;
     npcLines: { [npcLineLabel: string]: NPCLine },
     playerChoices: { [playerLineLabel: string]: PlayerChoice[] }
+    replace?: boolean;
 }
 
 export interface NPCLineEvent {
