@@ -4,6 +4,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tstl",
+    "build:web": "vite build --config web/vite.config.ts",
+    "dev:web": "vite dev --config web/vite.config.ts",
+    "preview:web": "vite preview --config web/vite.config.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -14,5 +17,14 @@
     "typescript-to-lua": "^1.25.1",
     "wl-typescript": "file:../wl-typescript",
     "sized-array": "1.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@xyflow/react": "^12.3.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^6.0.7"
   }
 }

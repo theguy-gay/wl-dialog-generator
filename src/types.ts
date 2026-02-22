@@ -15,7 +15,7 @@ export interface NPCLine {
     animation?: string | CharacterAnimation, // Name of an AnimationSequence to be played during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name and run un-looped for the duration.
     camera?: Camera, // Name of a Camera to be possessed during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
     hidableGroup?: HidableGroup, // Group that will be unhidden during the dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
-    triggers?: string, // Label of another NPCLine or PlayerChoice that should be played upon completion of this NPC line. If empty, ends the dialog.
+    triggers?: string | string[], // Label of another NPCLine or PlayerChoice that should be played upon completion of this NPC line. If empty, ends the dialog.
 }
 
 export interface PlayerChoice {

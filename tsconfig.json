@@ -17,6 +17,7 @@
       "strict": true,
       "types": ["wl-typescript", "node"],
     },
+    "include": ["src", "lua_sources"],
     "$schema": "https://raw.githubusercontent.com/TypeScriptToLua/TypeScriptToLua/master/tsconfig-schema.json",
     "tstl": {
       "noHeader": true,
