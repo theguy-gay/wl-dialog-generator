@@ -13,13 +13,12 @@ import dialogsJson from '../../dialogs.json';
 
 const WIP_KEY = 'wl-dialog-wip';
 
-const { nodes: initialNodes, edges: initialEdges, replace: initialReplace } =
+const { nodes: initialNodes, edges: initialEdges } =
   dialogToFlow(dialogsJson as Dialogs);
 
 function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [replace, setReplace] = useState<boolean | undefined>(initialReplace);
   const [menuOpen, setMenuOpen] = useState(false);
   const [wipSavedAt, setWipSavedAt] = useState<string | null>(() => {
     const saved = localStorage.getItem(WIP_KEY);
@@ -46,7 +45,7 @@ function App() {
 
   const handleExport = useCallback(() => {
     if (errors.length > 0) return;
-    const dialogs = flowToDialog(nodes, edges, replace);
+    const dialogs = flowToDialog(nodes, edges);
     const json = JSON.stringify(dialogs, null, 4);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -57,15 +56,26 @@ function App() {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
-  }, [nodes, edges, replace, errors]);
+  }, [nodes, edges, errors]);
 
   const handleOrganizeNodes = useCallback(() => {
-    const startNode = nodes.find(n => n.data._isStart);
+    const startNode = nodes.find(n => n.data._type === 'start');
     const startId = startNode?.id ?? nodes[0]?.id;
     if (!startId) return;
     const positions = computeTreeLayout(nodes.map(n => n.id), edges, startId);
     setNodes(nds => nds.map(n => ({ ...n, position: positions.get(n.id) ?? n.position })));
   }, [nodes, edges, setNodes]);
+
+  const handleAddStart = useCallback(() => {
+    if (nodes.some(n => n.data._type === 'start')) return;
+    const newNode: Node = {
+      id: 'start',
+      type: 'start',
+      position: { x: -600, y: 0 },
+      data: { _type: 'start' },
+    };
+    setNodes(nds => [...nds, newNode]);
+  }, [nodes, setNodes]);
 
   const handleAddNpcLine = useCallback(() => {
     const npcCount = nodes.filter(n => n.data._type === 'npcLine').length + 1;
@@ -75,7 +85,7 @@ function App() {
       id: `npcLine-${label}`,
       type: 'npcLine',
       position: { x: 0, y: maxY + 300 },
-      data: { _label: label, _type: 'npcLine', _isStart: false, duration: 1 },
+      data: { _label: label, _type: 'npcLine', duration: 1 },
     };
     setNodes(nds => [...nds, newNode]);
   }, [nodes, setNodes]);
@@ -91,7 +101,6 @@ function App() {
       data: {
         _label: label,
         _type: 'playerChoice',
-        _isStart: false,
         choices: [{ text: 'Choice 1' }],
       },
     };
@@ -105,10 +114,9 @@ function App() {
     reader.onload = (ev) => {
       try {
         const json = JSON.parse(ev.target?.result as string);
-        const { nodes: newNodes, edges: newEdges, replace: newReplace } = dialogToFlow(json as Dialogs);
+        const { nodes: newNodes, edges: newEdges } = dialogToFlow(json as Dialogs);
         setNodes(newNodes);
         setEdges(newEdges);
-        setReplace(newReplace);
       } catch (err) {
         alert('Failed to load file: ' + (err instanceof Error ? err.message : 'Invalid JSON'));
       }
@@ -119,9 +127,9 @@ function App() {
 
   const handleSaveWip = useCallback(() => {
     const savedAt = new Date().toISOString();
-    localStorage.setItem(WIP_KEY, JSON.stringify({ version: 1, nodes, edges, replace, savedAt }));
+    localStorage.setItem(WIP_KEY, JSON.stringify({ version: 1, nodes, edges, savedAt }));
     setWipSavedAt(savedAt);
-  }, [nodes, edges, replace]);
+  }, [nodes, edges]);
 
   // Keep a ref so the autosave interval always uses the latest handleSaveWip
   const handleSaveWipRef = useRef(handleSaveWip);
@@ -137,10 +145,9 @@ function App() {
     const saved = localStorage.getItem(WIP_KEY);
     if (!saved) return;
     try {
-      const { nodes: savedNodes, edges: savedEdges, replace: savedReplace } = JSON.parse(saved);
+      const { nodes: savedNodes, edges: savedEdges } = JSON.parse(saved);
       setNodes(savedNodes);
       setEdges(savedEdges);
-      setReplace(savedReplace);
     } catch (err) {
       alert('Failed to load saved progress: ' + (err instanceof Error ? err.message : 'Invalid data'));
     }
@@ -158,6 +165,7 @@ function App() {
           <h1>WL Dialog Generator</h1>
         </div>
         <div className="app-toolbar">
+          <button className="toolbar-btn" onClick={handleAddStart}>+ Start</button>
           <button className="toolbar-btn" onClick={handleAddNpcLine}>+ NPC Line</button>
           <button className="toolbar-btn" onClick={handleAddPlayerChoice}>+ Player Choice</button>
           <button className="toolbar-btn" onClick={handleOrganizeNodes}>Organize Nodes</button>

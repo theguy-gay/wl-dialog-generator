@@ -7,7 +7,7 @@ function stripPrefix(nodeId: string): string {
   return nodeId;
 }
 
-export function flowToDialog(nodes: Node[], edges: Edge[], replace?: boolean): Dialogs {
+export function flowToDialog(nodes: Node[], edges: Edge[]): Dialogs {
   // Index outgoing edges by source node ID for O(1) lookup
   const outgoingEdges = new Map<string, Edge[]>();
   for (const edge of edges) {
@@ -15,13 +15,19 @@ export function flowToDialog(nodes: Node[], edges: Edge[], replace?: boolean): D
     outgoingEdges.get(edge.source)!.push(edge);
   }
 
-  const startNode = nodes.find(n => n.data._isStart === true);
-  if (!startNode) throw new Error('No start node found in flow');
-  const start = stripPrefix(startNode.id);
+  // Find the Start Node and derive start label + replace from it
+  const startFlowNode = nodes.find(n => n.data._type === 'start');
+  if (!startFlowNode) throw new Error('No start node found in flow');
 
-  // BFS to find all nodes reachable from start — orphans are excluded from export
+  const startEdge = (outgoingEdges.get(startFlowNode.id) ?? [])[0];
+  if (!startEdge) throw new Error('Start node has no connection');
+
+  const start = stripPrefix(startEdge.target);
+  const replace = startFlowNode.data.replace as boolean | undefined;
+
+  // BFS to find all nodes reachable from the first dialog node — orphans are excluded from export
   const reachable = new Set<string>();
-  const queue: string[] = [startNode.id];
+  const queue: string[] = [startEdge.target];
   while (queue.length > 0) {
     const cur = queue.shift()!;
     if (reachable.has(cur)) continue;

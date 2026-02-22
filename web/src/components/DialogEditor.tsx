@@ -15,10 +15,12 @@ import { type Dispatch, type SetStateAction } from 'react';
 import '@xyflow/react/dist/style.css';
 import { NpcLineNode } from './NpcLineNode';
 import { PlayerChoiceNode } from './PlayerChoiceNode';
+import { StartNode } from './StartNode';
 import './nodes.css';
 
 // Defined outside the component so the object reference is stable across renders
 const nodeTypes = {
+  start: StartNode,
   npcLine: NpcLineNode,
   playerChoice: PlayerChoiceNode,
 };

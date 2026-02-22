@@ -43,6 +43,11 @@
   border-top: 3px solid #4a9eff;
 }
 
+.node-header-start {
+  background: #1a2a1a;
+  border-top: 3px solid #4caf50;
+}
+
 .node-fields {
   padding: 8px 10px;
   display: flex;

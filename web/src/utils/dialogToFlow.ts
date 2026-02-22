@@ -5,7 +5,6 @@ import type { Dialogs } from '../types';
 export interface DialogFlowResult {
   nodes: Node[];
   edges: Edge[];
-  replace?: boolean;
 }
 
 function resolveTargetNodeId(target: string, dialogs: Dialogs): string {
@@ -72,12 +71,30 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
 
   const arrow = { type: MarkerType.ArrowClosed };
 
+  // Create the Start Node
+  const startNodeData: Record<string, unknown> = { _type: 'start' };
+  if (dialogs.replace !== undefined) startNodeData.replace = dialogs.replace;
+  nodes.push({
+    id: 'start',
+    type: 'start',
+    position: { x: 0, y: 0 }, // overwritten by computeTreeLayout below
+    data: startNodeData,
+  });
+
+  // Edge from Start Node to the first dialog node
+  const startTargetId = resolveTargetNodeId(dialogs.start, dialogs);
+  edges.push({
+    id: 'edge-start-to-dialog',
+    source: 'start',
+    target: startTargetId,
+    markerEnd: arrow,
+  });
+
   // Process NPC lines
   for (const [label, line] of Object.entries(dialogs.npcLines)) {
     const data: Record<string, unknown> = {
       _label: label,
       _type: 'npcLine',
-      _isStart: label === dialogs.start,
       duration: line.duration,
     };
     if (line.text !== undefined) data.text = line.text;
@@ -125,7 +142,6 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
       data: {
         _label: label,
         _type: 'playerChoice',
-        _isStart: label === dialogs.start,
         choices: choices.map(c => ({ text: c.text })),
       },
     });
@@ -142,17 +158,11 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
     });
   }
 
-  // Compute BFS tree layout
-  const startId = dialogs.start in dialogs.playerChoices
-    ? `playerChoice-${dialogs.start}`
-    : `npcLine-${dialogs.start}`;
-
-  const positions = computeTreeLayout(nodes.map(n => n.id), edges, startId);
+  // Compute BFS tree layout from the Start Node
+  const positions = computeTreeLayout(nodes.map(n => n.id), edges, 'start');
   for (const node of nodes) {
     node.position = positions.get(node.id) ?? { x: 0, y: 0 };
   }
 
-  const result: DialogFlowResult = { nodes, edges };
-  if (dialogs.replace !== undefined) result.replace = dialogs.replace;
-  return result;
+  return { nodes, edges };
 }

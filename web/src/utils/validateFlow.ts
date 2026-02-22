@@ -16,13 +16,23 @@ export function validateFlow(nodes: Node[], edges: Edge[]): string[] {
     outgoingEdges.get(edge.source)!.push(edge);
   }
 
-  // Find start node
-  const startNode = nodes.find(n => n.data._isStart === true);
-  if (!startNode) return ['No start node found'];
+  // Validate Start Node count
+  const startNodes = nodes.filter(n => n.data._type === 'start');
+  if (startNodes.length === 0) return ['No start node found'];
+  if (startNodes.length > 1) errors.push('Multiple start nodes — only one is allowed');
+
+  const startNode = startNodes[0];
+  const startEdges = outgoingEdges.get(startNode.id) ?? [];
+  if (startEdges.length === 0) {
+    errors.push('Start node is not connected to a dialog node');
+    return errors;
+  }
+
+  const firstDialogNodeId = startEdges[0].target;
 
   // BFS — only validate reachable nodes
   const reachable = new Set<string>();
-  const queue: string[] = [startNode.id];
+  const queue: string[] = [firstDialogNodeId];
   while (queue.length > 0) {
     const cur = queue.shift()!;
     if (reachable.has(cur)) continue;
