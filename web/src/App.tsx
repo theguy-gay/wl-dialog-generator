@@ -4,7 +4,7 @@ import type { Node } from '@xyflow/react';
 import DialogEditor from './components/DialogEditor';
 import { ErrorPanel } from './components/ErrorPanel';
 import type { Dialogs } from './types';
-import { dialogToFlow } from './utils/dialogToFlow';
+import { dialogToFlow, computeTreeLayout } from './utils/dialogToFlow';
 import { flowToDialog } from './utils/flowToDialog';
 import { validateFlow } from './utils/validateFlow';
 import './App.css';
@@ -34,6 +34,14 @@ function App() {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
   }, [nodes, edges, replace, errors]);
+
+  const handleOrganizeNodes = useCallback(() => {
+    const startNode = nodes.find(n => n.data._isStart);
+    const startId = startNode?.id ?? nodes[0]?.id;
+    if (!startId) return;
+    const positions = computeTreeLayout(nodes.map(n => n.id), edges, startId);
+    setNodes(nds => nds.map(n => ({ ...n, position: positions.get(n.id) ?? n.position })));
+  }, [nodes, edges, setNodes]);
 
   const handleAddNpcLine = useCallback(() => {
     const npcCount = nodes.filter(n => n.data._type === 'npcLine').length + 1;
@@ -71,11 +79,11 @@ function App() {
       <header className="app-header">
         <div className="app-title">
           <h1>WL Dialog Generator</h1>
-          <p>Visual dialog flow editor for WildLife sandbox scripts</p>
         </div>
         <div className="app-toolbar">
           <button className="toolbar-btn" onClick={handleAddNpcLine}>+ NPC Line</button>
           <button className="toolbar-btn" onClick={handleAddPlayerChoice}>+ Player Choice</button>
+          <button className="toolbar-btn" onClick={handleOrganizeNodes}>Organize Nodes</button>
           <button className="toolbar-btn toolbar-btn-primary" onClick={handleExport} disabled={errors.length > 0}>Export JSON</button>
         </div>
       </header>

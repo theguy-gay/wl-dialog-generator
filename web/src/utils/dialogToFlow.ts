@@ -13,7 +13,7 @@ function resolveTargetNodeId(target: string, dialogs: Dialogs): string {
   return `npcLine-${target}`;
 }
 
-function computeTreeLayout(
+export function computeTreeLayout(
   nodeIds: string[],
   edges: Edge[],
   startId: string,
