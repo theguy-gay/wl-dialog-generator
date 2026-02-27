@@ -1,10 +1,12 @@
-import { Handle, Position, useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useEdges } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 
 export function StartNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements } = useReactFlow();
+  const edges = useEdges();
 
   const replace = data.replace as boolean | undefined;
+  const outgoingColor = edges.find(e => e.source === id)?.data?.color as string | undefined;
 
   return (
     <div className="dialog-node">
@@ -34,6 +36,7 @@ export function StartNode({ id, data }: NodeProps) {
             type="source"
             position={Position.Right}
             id="start"
+            style={outgoingColor ? { background: outgoingColor } : {}}
           />
         </div>
       </div>

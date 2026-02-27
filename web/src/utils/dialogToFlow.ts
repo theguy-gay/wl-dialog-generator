@@ -1,6 +1,7 @@
 import { MarkerType } from '@xyflow/react';
 import type { Node, Edge } from '@xyflow/react';
 import type { Dialogs } from '../types';
+import { pickEdgeColor } from './edgeColors';
 
 export interface DialogFlowResult {
   nodes: Node[];
@@ -68,6 +69,7 @@ export function computeTreeLayout(
 export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
+  let edgeIndex = 0;
 
   const arrow = { type: MarkerType.ArrowClosed };
 
@@ -88,6 +90,7 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
     source: 'start',
     target: startTargetId,
     markerEnd: arrow,
+    data: { color: pickEdgeColor(edgeIndex++) },
   });
 
   // Process NPC lines
@@ -119,6 +122,7 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
             source: `npcLine-${label}`,
             target: resolveTargetNodeId(target, dialogs),
             markerEnd: arrow,
+            data: { color: pickEdgeColor(edgeIndex++) },
           });
         });
       } else {
@@ -128,6 +132,7 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
           source: `npcLine-${label}`,
           target: resolveTargetNodeId(target, dialogs),
           markerEnd: arrow,
+          data: { color: pickEdgeColor(edgeIndex++) },
         });
       }
     }
@@ -153,7 +158,7 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
         sourceHandle: `choice-${i}`,
         target: `npcLine-${choice.triggers}`,
         markerEnd: arrow,
-        data: { choiceIndex: i },
+        data: { choiceIndex: i, color: pickEdgeColor(edgeIndex++) },
       });
     });
   }

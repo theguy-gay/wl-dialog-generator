@@ -1,5 +1,6 @@
-import { Handle, Position, useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useEdges } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
+import { AnimatedHandle } from './AnimatedHandle';
 import { RenameableLabel } from './RenameableLabel';
 import { useRenameNode } from '../hooks/useRenameNode';
 import { SubBox } from './SubBox';
@@ -7,6 +8,12 @@ import { fixChoiceEdgesOnRemove } from '../utils/fixChoiceEdges';
 
 export function PlayerChoiceNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements, setEdges } = useReactFlow();
+  const edges = useEdges();
+
+  const incomingColors = edges
+    .filter(e => e.target === id)
+    .map(e => e.data?.color as string)
+    .filter(Boolean);
   const rename = useRenameNode(id, 'playerChoice');
 
   const choices = data.choices as Array<{ text: string }>;
@@ -27,7 +34,7 @@ export function PlayerChoiceNode({ id, data }: NodeProps) {
 
   return (
     <div className="dialog-node">
-      <Handle type="target" position={Position.Left} style={{ top: 14 }} />
+      <AnimatedHandle type="target" position={Position.Left} style={{ top: 14 }} colors={incomingColors} />
 
       <div className="node-header node-header-choice">
         <RenameableLabel label={data._label as string} onRename={rename} />
@@ -40,29 +47,35 @@ export function PlayerChoiceNode({ id, data }: NodeProps) {
 
       <div className="node-fields">
         <SubBox label="Choices" onAdd={addChoice}>
-          {choices.map((choice, i) => (
-            <div className="node-field node-choice-row" key={i}>
-              <label>Choice {i + 1}</label>
-              <input
-                className="nodrag"
-                type="text"
-                value={choice.text}
-                onChange={e => onChoiceTextChange(i, e.target.value)}
-              />
-              <button
-                className="node-icon-btn nodrag"
-                onClick={() => removeChoice(i)}
-                title="Remove"
-              >
-                ×
-              </button>
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={`choice-${i}`}
-              />
-            </div>
-          ))}
+          {choices.map((choice, i) => {
+            const choiceColor = edges.find(
+              e => e.source === id && e.sourceHandle === `choice-${i}`
+            )?.data?.color as string | undefined;
+            return (
+              <div className="node-field node-choice-row" key={i}>
+                <label>Choice {i + 1}</label>
+                <input
+                  className="nodrag"
+                  type="text"
+                  value={choice.text}
+                  onChange={e => onChoiceTextChange(i, e.target.value)}
+                />
+                <button
+                  className="node-icon-btn nodrag"
+                  onClick={() => removeChoice(i)}
+                  title="Remove"
+                >
+                  ×
+                </button>
+                <Handle
+                  type="source"
+                  position={Position.Right}
+                  id={`choice-${i}`}
+                  style={choiceColor ? { background: choiceColor } : {}}
+                />
+              </div>
+            );
+          })}
         </SubBox>
       </div>
     </div>

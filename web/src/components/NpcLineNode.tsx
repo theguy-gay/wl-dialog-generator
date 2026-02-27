@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Handle, Position, useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useEdges } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
+import { AnimatedHandle } from './AnimatedHandle';
 import type { Camera, HidableGroup, CharacterAnimation, BodyAnimationStage } from '../types';
 import { RenameableLabel } from './RenameableLabel';
 import { useRenameNode } from '../hooks/useRenameNode';
@@ -10,6 +11,15 @@ import { tooltips } from '../utils/fieldTooltips';
 
 export function NpcLineNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements, setEdges, getEdges } = useReactFlow();
+  const edges = useEdges();
+
+  const incomingColors = edges
+    .filter(e => e.target === id)
+    .map(e => e.data?.color as string)
+    .filter(Boolean);
+
+  const outgoingColor = edges.find(e => e.source === id)?.data?.color as string | undefined;
+  const triggersHandleStyle = outgoingColor ? { background: outgoingColor } : {};
   const rename = useRenameNode(id, 'npcLine');
 
   const camera = data.camera as Camera | undefined;
@@ -65,7 +75,7 @@ export function NpcLineNode({ id, data }: NodeProps) {
 
   return (
     <div className="dialog-node">
-      <Handle type="target" position={Position.Left} style={{ top: 14 }} />
+      <AnimatedHandle type="target" position={Position.Left} style={{ top: 14 }} colors={incomingColors} />
 
       <div className="node-header node-header-npc">
         <RenameableLabel label={data._label as string} onRename={rename} />
@@ -348,7 +358,7 @@ export function NpcLineNode({ id, data }: NodeProps) {
                 setEdges(edges => edges.filter(e => e.source !== id));
               }}
             >×</button>
-            <Handle type="source" position={Position.Right} id="triggers" />
+            <Handle type="source" position={Position.Right} id="triggers" style={triggersHandleStyle} />
           </div>
         ) : (
           <button
