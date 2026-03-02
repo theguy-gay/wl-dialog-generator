@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Handle, Position, useReactFlow, useEdges } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { AnimatedHandle } from './AnimatedHandle';
 import type { Camera, HidableGroup, CharacterAnimation, BodyAnimationStage } from '../types';
 import { RenameableLabel } from './RenameableLabel';
@@ -8,6 +11,7 @@ import { useRenameNode } from '../hooks/useRenameNode';
 import { SubBox } from './SubBox';
 import { FieldLabel } from './FieldLabel';
 import { tooltips } from '../utils/fieldTooltips';
+import { SortableArrayItem, SortableSubBoxWrapper } from './SortableArrayItem';
 
 export function NpcLineNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements, setEdges, getEdges } = useReactFlow();
@@ -129,26 +133,40 @@ export function NpcLineNode({ id, data }: NodeProps) {
             onAdd={() => updateNodeData(id, { media: [...mediaArr, ''] })}
             onRemove={() => { setMediaOpen(false); updateNodeData(id, { media: undefined }); }}
           >
-            {mediaArr.map((v, i) => (
-              <div className="node-array-entry" key={i}>
-                <input
-                  className="nodrag"
-                  type="text"
-                  value={v}
-                  onChange={e => {
-                    const next = mediaArr.map((m, idx) => idx === i ? e.target.value : m);
-                    updateNodeData(id, { media: next.length ? next : undefined });
-                  }}
-                />
-                <button
-                  className="node-icon-btn nodrag"
-                  onClick={() => {
-                    const next = mediaArr.filter((_, idx) => idx !== i);
-                    updateNodeData(id, { media: next.length ? next : undefined });
-                  }}
-                >×</button>
-              </div>
-            ))}
+            <DndContext
+              collisionDetection={closestCenter}
+              onDragEnd={(event: DragEndEvent) => {
+                const { active, over } = event;
+                if (!over || active.id === over.id) return;
+                const oldIndex = mediaArr.findIndex((_, i) => `media-${i}` === active.id);
+                const newIndex = mediaArr.findIndex((_, i) => `media-${i}` === over.id);
+                if (oldIndex !== -1 && newIndex !== -1)
+                  updateNodeData(id, { media: arrayMove(mediaArr, oldIndex, newIndex) });
+              }}
+            >
+              <SortableContext items={mediaArr.map((_, i) => `media-${i}`)} strategy={verticalListSortingStrategy}>
+                {mediaArr.map((v, i) => (
+                  <SortableArrayItem key={`media-${i}`} id={`media-${i}`}>
+                    <input
+                      className="nodrag"
+                      type="text"
+                      value={v}
+                      onChange={e => {
+                        const next = mediaArr.map((m, idx) => idx === i ? e.target.value : m);
+                        updateNodeData(id, { media: next.length ? next : undefined });
+                      }}
+                    />
+                    <button
+                      className="node-icon-btn nodrag"
+                      onClick={() => {
+                        const next = mediaArr.filter((_, idx) => idx !== i);
+                        updateNodeData(id, { media: next.length ? next : undefined });
+                      }}
+                    >×</button>
+                  </SortableArrayItem>
+                ))}
+              </SortableContext>
+            </DndContext>
           </SubBox>
         ) : (
           <button
@@ -230,42 +248,56 @@ export function NpcLineNode({ id, data }: NodeProps) {
                   />
                 </div>
                 <SubBox label="Body Animation Stages" onAdd={addStage}>
-                  {stages.map((stage, i) => (
-                    <SubBox key={i} label={`Stage ${i + 1}`} onRemove={() => removeStage(i)}>
-                      <div className="node-field">
-                        <label>Start Animation</label>
-                        <input className="nodrag" type="number" value={stage.startAnimation}
-                          onChange={e => updateStage(i, { startAnimation: Number(e.target.value) })} />
-                      </div>
-                      <div className="node-field">
-                        <label>Start Time</label>
-                        <input className="nodrag" type="number" value={stage.startTime}
-                          onChange={e => updateStage(i, { startTime: Number(e.target.value) })} />
-                      </div>
-                      <div className="node-field">
-                        <label>End Animation</label>
-                        <input className="nodrag" type="number" value={stage.endAnimation}
-                          onChange={e => updateStage(i, { endAnimation: Number(e.target.value) })} />
-                      </div>
-                      <div className="node-field">
-                        <label>End Time</label>
-                        <input className="nodrag" type="number" value={stage.endTime}
-                          onChange={e => updateStage(i, { endTime: Number(e.target.value) })} />
-                      </div>
-                      <div className="node-field">
-                        <label>Disable Chest Physics</label>
-                        <input className="nodrag" type="checkbox"
-                          checked={stage.disableChestPhysics ?? false}
-                          onChange={e => updateStage(i, { disableChestPhysics: e.target.checked || undefined })} />
-                      </div>
-                      <div className="node-field">
-                        <label>Disable Butt Physics</label>
-                        <input className="nodrag" type="checkbox"
-                          checked={stage.disableButtPhysics ?? false}
-                          onChange={e => updateStage(i, { disableButtPhysics: e.target.checked || undefined })} />
-                      </div>
-                    </SubBox>
-                  ))}
+                  <DndContext
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event: DragEndEvent) => {
+                      const { active, over } = event;
+                      if (!over || active.id === over.id) return;
+                      const oldIndex = stages.findIndex((_, i) => `stage-${i}` === active.id);
+                      const newIndex = stages.findIndex((_, i) => `stage-${i}` === over.id);
+                      if (oldIndex !== -1 && newIndex !== -1)
+                        updateAnim({ bodyAnimationStages: arrayMove(stages, oldIndex, newIndex) });
+                    }}
+                  >
+                    <SortableContext items={stages.map((_, i) => `stage-${i}`)} strategy={verticalListSortingStrategy}>
+                      {stages.map((stage, i) => (
+                        <SortableSubBoxWrapper key={`stage-${i}`} id={`stage-${i}`} label={`Stage ${i + 1}`} onRemove={() => removeStage(i)}>
+                          <div className="node-field">
+                            <label>Start Animation</label>
+                            <input className="nodrag" type="number" value={stage.startAnimation}
+                              onChange={e => updateStage(i, { startAnimation: Number(e.target.value) })} />
+                          </div>
+                          <div className="node-field">
+                            <label>Start Time</label>
+                            <input className="nodrag" type="number" value={stage.startTime}
+                              onChange={e => updateStage(i, { startTime: Number(e.target.value) })} />
+                          </div>
+                          <div className="node-field">
+                            <label>End Animation</label>
+                            <input className="nodrag" type="number" value={stage.endAnimation}
+                              onChange={e => updateStage(i, { endAnimation: Number(e.target.value) })} />
+                          </div>
+                          <div className="node-field">
+                            <label>End Time</label>
+                            <input className="nodrag" type="number" value={stage.endTime}
+                              onChange={e => updateStage(i, { endTime: Number(e.target.value) })} />
+                          </div>
+                          <div className="node-field">
+                            <label>Disable Chest Physics</label>
+                            <input className="nodrag" type="checkbox"
+                              checked={stage.disableChestPhysics ?? false}
+                              onChange={e => updateStage(i, { disableChestPhysics: e.target.checked || undefined })} />
+                          </div>
+                          <div className="node-field">
+                            <label>Disable Butt Physics</label>
+                            <input className="nodrag" type="checkbox"
+                              checked={stage.disableButtPhysics ?? false}
+                              onChange={e => updateStage(i, { disableButtPhysics: e.target.checked || undefined })} />
+                          </div>
+                        </SortableSubBoxWrapper>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                 </SubBox>
               </SubBox>
             )}

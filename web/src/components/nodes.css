@@ -100,6 +100,12 @@
   position: relative;
   padding-right: 14px;
 }
+.node-choice-row label {
+  width: 58px;
+  flex-shrink: 0;
+  color: #888;
+  font-size: 11px;
+}
 
 .node-header-label {
   cursor: text;
@@ -212,6 +218,19 @@
   align-items: center;
 }
 .node-array-entry input { flex: 1; }
+
+.node-drag-handle {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: grab;
+  padding: 0 2px;
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.node-drag-handle:hover { color: #888; }
+.node-drag-handle:active { cursor: grabbing; }
 
 .node-field-help {
   cursor: help;
