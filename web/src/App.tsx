@@ -1,6 +1,45 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNodesState, useEdgesState } from '@xyflow/react';
 import type { Node } from '@xyflow/react';
+
+// Approximate node bounding box used for collision detection (generous to avoid overlap)
+const NODE_W = 280;
+const NODE_H = 190;
+const GRID_STEP = 80;
+const PAD = 20;
+
+function findFreePosition(center: { x: number; y: number }, nodes: Node[]): { x: number; y: number } {
+  const cx = center.x - NODE_W / 2;
+  const cy = center.y - NODE_H / 2;
+
+  function overlaps(x: number, y: number): boolean {
+    return nodes.some(n =>
+      !(x + NODE_W + PAD < n.position.x ||
+        x > n.position.x + NODE_W + PAD ||
+        y + NODE_H + PAD < n.position.y ||
+        y > n.position.y + NODE_H + PAD)
+    );
+  }
+
+  if (!overlaps(cx, cy)) return { x: cx, y: cy };
+
+  for (let ring = 1; ring <= 20; ring++) {
+    const candidates: { x: number; y: number }[] = [];
+    for (let i = -ring; i <= ring; i++) {
+      for (let j = -ring; j <= ring; j++) {
+        if (Math.abs(i) === ring || Math.abs(j) === ring) {
+          candidates.push({ x: cx + i * GRID_STEP, y: cy + j * GRID_STEP });
+        }
+      }
+    }
+    candidates.sort((a, b) => (a.x - cx) ** 2 + (a.y - cy) ** 2 - ((b.x - cx) ** 2 + (b.y - cy) ** 2));
+    for (const pos of candidates) {
+      if (!overlaps(pos.x, pos.y)) return pos;
+    }
+  }
+
+  return { x: cx, y: cy };
+}
 import DialogEditor from './components/DialogEditor';
 import { ErrorPanel } from './components/ErrorPanel';
 import { SaveLoadMenu } from './components/SaveLoadMenu';
@@ -28,6 +67,10 @@ function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveLoadWrapperRef = useRef<HTMLDivElement>(null);
+  const getCenterRef = useRef<(() => { x: number; y: number }) | null>(null);
+  const handleRegisterGetCenter = useCallback((fn: () => { x: number; y: number }) => {
+    getCenterRef.current = fn;
+  }, []);
 
   const errors = useMemo(() => validateFlow(nodes, edges), [nodes, edges]);
 
@@ -68,10 +111,11 @@ function App() {
 
   const handleAddStart = useCallback(() => {
     if (nodes.some(n => n.data._type === 'start')) return;
+    const center = getCenterRef.current?.() ?? { x: 0, y: 0 };
     const newNode: Node = {
       id: 'start',
       type: 'start',
-      position: { x: -600, y: 0 },
+      position: findFreePosition(center, nodes),
       data: { _type: 'start' },
     };
     setNodes(nds => [...nds, newNode]);
@@ -80,11 +124,11 @@ function App() {
   const handleAddNpcLine = useCallback(() => {
     const npcCount = nodes.filter(n => n.data._type === 'npcLine').length + 1;
     const label = `npcLine${npcCount}`;
-    const maxY = Math.max(0, ...nodes.map(n => n.position.y));
+    const center = getCenterRef.current?.() ?? { x: 0, y: 0 };
     const newNode: Node = {
       id: `npcLine-${label}`,
       type: 'npcLine',
-      position: { x: 0, y: maxY + 300 },
+      position: findFreePosition(center, nodes),
       data: { _label: label, _type: 'npcLine', duration: 1 },
     };
     setNodes(nds => [...nds, newNode]);
@@ -93,11 +137,11 @@ function App() {
   const handleAddPlayerChoice = useCallback(() => {
     const choiceCount = nodes.filter(n => n.data._type === 'playerChoice').length + 1;
     const label = `playerChoice${choiceCount}`;
-    const maxY = Math.max(0, ...nodes.map(n => n.position.y));
+    const center = getCenterRef.current?.() ?? { x: 0, y: 0 };
     const newNode: Node = {
       id: `playerChoice-${label}`,
       type: 'playerChoice',
-      position: { x: 0, y: maxY + 300 },
+      position: findFreePosition(center, nodes),
       data: {
         _label: label,
         _type: 'playerChoice',
@@ -192,6 +236,7 @@ function App() {
           edges={edges}
           setEdges={setEdges}
           onEdgesChange={onEdgesChange}
+          onRegisterGetCenter={handleRegisterGetCenter}
         />
       </main>
       <ErrorPanel errors={errors} />

@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   addEdge,
   Controls,
   Background,
   BackgroundVariant,
+  useReactFlow,
   type Connection,
   type Node,
   type Edge,
@@ -31,15 +32,43 @@ const edgeTypes = {
   default: CustomEdge,
 };
 
+// Renders inside ReactFlow's context to expose a viewport-center getter to the parent
+function ViewportBridge({
+  containerRef,
+  onReady,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  onReady: (fn: () => { x: number; y: number }) => void;
+}) {
+  const { screenToFlowPosition } = useReactFlow();
+  const s2f = useRef(screenToFlowPosition);
+  s2f.current = screenToFlowPosition;
+
+  useEffect(() => {
+    onReady(() => {
+      const el = containerRef.current;
+      if (!el) return { x: 0, y: 0 };
+      const rect = el.getBoundingClientRect();
+      return s2f.current({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
+
 interface DialogEditorProps {
   nodes: Node[];
   onNodesChange: OnNodesChange;
   edges: Edge[];
   setEdges: Dispatch<SetStateAction<Edge[]>>;
   onEdgesChange: OnEdgesChange;
+  onRegisterGetCenter: (fn: () => { x: number; y: number }) => void;
 }
 
-function DialogEditor({ nodes, onNodesChange, edges, setEdges, onEdgesChange }: DialogEditorProps) {
+function DialogEditor({ nodes, onNodesChange, edges, setEdges, onEdgesChange, onRegisterGetCenter }: DialogEditorProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges(eds => {
@@ -78,7 +107,7 @@ function DialogEditor({ nodes, onNodesChange, edges, setEdges, onEdgesChange }: 
         </defs>
       </svg>
 
-      <div style={{ width: '100%', height: '100%' }}>
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -89,6 +118,7 @@ function DialogEditor({ nodes, onNodesChange, edges, setEdges, onEdgesChange }: 
           onConnect={onConnect}
           fitView
         >
+          <ViewportBridge containerRef={containerRef} onReady={onRegisterGetCenter} />
           <Controls />
           <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
         </ReactFlow>
