@@ -116,6 +116,7 @@ function DialogEditor({ nodes, onNodesChange, edges, setEdges, onEdgesChange, on
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          deleteKeyCode={null}
           fitView
         >
           <ViewportBridge containerRef={containerRef} onReady={onRegisterGetCenter} />
