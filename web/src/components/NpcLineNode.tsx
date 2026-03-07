@@ -12,9 +12,14 @@ import { SubBox } from './SubBox';
 import { FieldLabel } from './FieldLabel';
 import { tooltips } from '../utils/fieldTooltips';
 import { SortableArrayItem, SortableSubBoxWrapper } from './SortableArrayItem';
+import { useAiVoice } from '../context/AiVoiceContext';
+import { AiVoiceSection } from './AiVoiceSection';
 
 export function NpcLineNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements, setEdges, getEdges } = useReactFlow();
+  const { aiMode, characters, generatingNodes, voiceGenerations } = useAiVoice();
+  const assignedCharacterId = data.aiCharacterId as string | undefined;
+  const assignedChar = assignedCharacterId ? characters.find(c => c.id === assignedCharacterId) : undefined;
   const edges = useEdges();
 
   const incomingColors = edges
@@ -77,11 +82,30 @@ export function NpcLineNode({ id, data }: NodeProps) {
     });
   }
 
+  const nodeStyle = assignedChar ? { '--char-color': assignedChar.color } as React.CSSProperties : undefined;
+
   return (
-    <div className="dialog-node">
+    <div
+      className="dialog-node"
+      style={nodeStyle}
+      onDragOver={aiMode ? (e => {
+        if (e.dataTransfer.types.includes('application/x-character-id')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }
+      }) : undefined}
+      onDrop={aiMode ? (e => {
+        const charId = e.dataTransfer.getData('application/x-character-id');
+        if (charId) {
+          e.preventDefault();
+          e.stopPropagation();
+          updateNodeData(id, { aiCharacterId: charId });
+        }
+      }) : undefined}
+    >
       <AnimatedHandle type="target" position={Position.Left} style={{ top: 14 }} colors={incomingColors} />
 
-      <div className="node-header node-header-npc">
+      <div className="node-header node-header-npc" style={assignedChar ? { borderLeft: `3px solid ${assignedChar.color}` } : undefined}>
         <RenameableLabel label={data._label as string} onRename={rename} />
         <button
           className="node-delete-btn nodrag"
@@ -122,6 +146,8 @@ export function NpcLineNode({ id, data }: NodeProps) {
             type="number"
             value={(data.duration as number) ?? 0}
             onChange={e => updateNodeData(id, { duration: Number(e.target.value) })}
+            disabled={generatingNodes.has(id) || voiceGenerations.has(id)}
+            style={generatingNodes.has(id) || voiceGenerations.has(id) ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
           />
         </div>
 
@@ -398,6 +424,15 @@ export function NpcLineNode({ id, data }: NodeProps) {
             data-tooltip={tooltips.triggers}
             onClick={() => setTriggersOpen(true)}
           >+ Triggers</button>
+        )}
+
+        {/* AI Voice — only visible in AI mode */}
+        {aiMode && (
+          <AiVoiceSection
+            nodeId={id}
+            text={data.text as string | undefined}
+            assignedCharacterId={assignedCharacterId}
+          />
         )}
       </div>
 

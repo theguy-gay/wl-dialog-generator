@@ -9,5 +9,12 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          elevenlabs: ['@elevenlabs/elevenlabs-js'],
+        },
+      },
+    },
   },
 });

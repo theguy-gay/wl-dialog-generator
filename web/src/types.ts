@@ -39,9 +39,24 @@ export interface PlayerChoice {
   triggers: string;
 }
 
+export interface AiVoiceCharacter {
+  id: string;
+  name: string;
+  voiceId: string;
+  color: string;
+}
+
+export interface AiVoiceMetadata {
+  characters: AiVoiceCharacter[];
+  /** Maps NPC line label → character id */
+  voiceAssignments: { [npcLineLabel: string]: string };
+}
+
 export interface Dialogs {
   start: string;
   replace?: boolean;
   npcLines: { [label: string]: NPCLine };
   playerChoices: { [label: string]: PlayerChoice[] };
+  /** Editor-only metadata — ignored by the game runtime */
+  _aiVoice?: AiVoiceMetadata;
 }

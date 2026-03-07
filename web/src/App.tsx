@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNodesState, useEdgesState } from '@xyflow/react';
-import type { Node } from '@xyflow/react';
+import type { Node, Edge } from '@xyflow/react';
+import { AiVoiceContext, CHARACTER_COLORS } from './context/AiVoiceContext';
+import type { Character } from './context/AiVoiceContext';
+import { generateSpeech } from './utils/elevenLabsApi';
+import { AiVoiceModal } from './components/AiVoiceModal';
+import { AddCharacterModal } from './components/AddCharacterModal';
+import { CharacterPanel } from './components/CharacterPanel';
 
 // Approximate node bounding box used for collision detection (generous to avoid overlap)
 const NODE_W = 280;
@@ -43,7 +49,7 @@ function findFreePosition(center: { x: number; y: number }, nodes: Node[]): { x:
 import DialogEditor from './components/DialogEditor';
 import { ErrorPanel } from './components/ErrorPanel';
 import { SaveLoadMenu } from './components/SaveLoadMenu';
-import type { Dialogs } from './types';
+import type { Dialogs, AiVoiceMetadata } from './types';
 import { dialogToFlow, computeTreeLayout } from './utils/dialogToFlow';
 import { flowToDialog } from './utils/flowToDialog';
 import { validateFlow } from './utils/validateFlow';
@@ -74,11 +80,146 @@ function App() {
 
   const errors = useMemo(() => validateFlow(nodes, edges), [nodes, edges]);
 
+  // AI Voice Mode state
+  const [aiMode, setAiMode] = useState<{ apiKey: string } | null>(null);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [showAddCharModal, setShowAddCharModal] = useState(false);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [voiceGenerations, setVoiceGenerations] = useState<Map<string, ArrayBuffer>>(() => new Map());
+  const [generatingNodes, setGeneratingNodes] = useState<Set<string>>(() => new Set());
+  // Holds parsed file data when the AI modal is triggered mid-load
+  const [pendingFileLoad, setPendingFileLoad] = useState<{
+    nodes: Node[];
+    edges: Edge[];
+    aiVoice: AiVoiceMetadata;
+  } | null>(null);
+
+  function applyAiVoiceToNodes(loadedNodes: Node[], aiVoice: AiVoiceMetadata): Node[] {
+    const { characters: loadedChars = [], voiceAssignments = {} } = aiVoice;
+    setCharacters(loadedChars);
+    setVoiceGenerations(new Map());
+    return loadedNodes.map(n => {
+      if (n.data._type !== 'npcLine') return n;
+      const label = n.id.startsWith('npcLine-') ? n.id.slice('npcLine-'.length) : n.id;
+      const charId = voiceAssignments[label];
+      return charId ? { ...n, data: { ...n.data, aiCharacterId: charId } } : n;
+    });
+  }
+
+  const handleEnableAiMode = useCallback((apiKey: string) => {
+    setAiMode({ apiKey });
+    setShowAiModal(false);
+    if (pendingFileLoad) {
+      setNodes(applyAiVoiceToNodes(pendingFileLoad.nodes, pendingFileLoad.aiVoice));
+      setEdges(pendingFileLoad.edges);
+      setPendingFileLoad(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingFileLoad, setNodes, setEdges]);
+
+  const handleAiModalCancel = useCallback(() => {
+    setShowAiModal(false);
+    if (pendingFileLoad) {
+      setNodes(pendingFileLoad.nodes);
+      setEdges(pendingFileLoad.edges);
+      setPendingFileLoad(null);
+    }
+  }, [pendingFileLoad, setNodes, setEdges]);
+
+  const handleDisableAiMode = useCallback(() => {
+    setAiMode(null);
+    setCharacters([]);
+    setVoiceGenerations(new Map());
+    setGeneratingNodes(new Set());
+    setNodes(nds => nds.map(n => {
+      if (n.data.aiCharacterId === undefined) return n;
+      const { aiCharacterId: _, ...rest } = n.data;
+      return { ...n, data: rest };
+    }));
+  }, [setNodes]);
+
+  const handleAddCharacter = useCallback((name: string, voiceId: string) => {
+    setCharacters(prev => {
+      const color = CHARACTER_COLORS[prev.length % CHARACTER_COLORS.length];
+      return [...prev, { id: `char-${Date.now()}`, name, voiceId, color }];
+    });
+    setShowAddCharModal(false);
+  }, []);
+
+  const handleRemoveCharacter = useCallback((charId: string) => {
+    setCharacters(prev => prev.filter(c => c.id !== charId));
+    // Unassign from any nodes using this character
+    setNodes(nds => nds.map(n => {
+      if (n.data.aiCharacterId !== charId) return n;
+      const { aiCharacterId: _, ...rest } = n.data;
+      return { ...n, data: rest };
+    }));
+    setVoiceGenerations(prev => {
+      // We don't know which nodes used this char, so leave generations intact
+      return prev;
+    });
+  }, [setNodes]);
+
+  const handleGenerateVoice = useCallback(async (nodeId: string, text: string, voiceId: string) => {
+    if (!aiMode) return;
+    setGeneratingNodes(prev => new Set(prev).add(nodeId));
+    try {
+      const buf = await generateSpeech(aiMode.apiKey, voiceId, text);
+
+      // Decode to get actual audio duration
+      const audioCtx = new AudioContext();
+      const decoded = await audioCtx.decodeAudioData(buf.slice(0));
+      await audioCtx.close();
+      const duration = Math.round(decoded.duration * 10) / 10;
+
+      setNodes(nds => nds.map(n =>
+        n.id === nodeId ? { ...n, data: { ...n.data, duration } } : n
+      ));
+      setVoiceGenerations(prev => {
+        const next = new Map(prev);
+        next.set(nodeId, buf);
+        return next;
+      });
+    } catch (err) {
+      alert('Voice generation failed: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setGeneratingNodes(prev => {
+        const next = new Set(prev);
+        next.delete(nodeId);
+        return next;
+      });
+    }
+  }, [aiMode, setNodes]);
+
+  const handlePlayVoice = useCallback((nodeId: string) => {
+    const buf = voiceGenerations.get(nodeId);
+    if (!buf) return;
+    const blob = new Blob([buf], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.play();
+    audio.onended = () => URL.revokeObjectURL(url);
+  }, [voiceGenerations]);
+
+  const handleUnassignCharacter = useCallback((nodeId: string) => {
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      const { aiCharacterId: _, ...rest } = n.data;
+      return { ...n, data: rest };
+    }));
+    setVoiceGenerations(prev => {
+      if (!prev.has(nodeId)) return prev;
+      const next = new Map(prev);
+      next.delete(nodeId);
+      return next;
+    });
+  }, [setNodes]);
+
   // Close menu when clicking outside the wrapper
   useEffect(() => {
     if (!menuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (saveLoadWrapperRef.current && !saveLoadWrapperRef.current.contains(e.target as Node)) {
+      if (saveLoadWrapperRef.current && !saveLoadWrapperRef.current.contains(e.target as HTMLElement)) {
         setMenuOpen(false);
       }
     };
@@ -86,9 +227,24 @@ function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
     if (errors.length > 0) return;
+    if (aiMode && voiceGenerations.size > 0) {
+      const { exportZip } = await import('./utils/exportZip');
+      await exportZip(nodes, edges, voiceGenerations, characters);
+      return;
+    }
     const dialogs = flowToDialog(nodes, edges);
+    if (aiMode && characters.length > 0) {
+      const voiceAssignments: { [label: string]: string } = {};
+      for (const n of nodes) {
+        if (n.data._type === 'npcLine' && typeof n.data.aiCharacterId === 'string') {
+          const label = n.id.startsWith('npcLine-') ? n.id.slice('npcLine-'.length) : n.id;
+          voiceAssignments[label] = n.data.aiCharacterId as string;
+        }
+      }
+      dialogs._aiVoice = { characters, voiceAssignments };
+    }
     const json = JSON.stringify(dialogs, null, 4);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -99,7 +255,7 @@ function App() {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
-  }, [nodes, edges, errors]);
+  }, [nodes, edges, errors, aiMode, voiceGenerations]);
 
   const handleOrganizeNodes = useCallback(() => {
     const startNode = nodes.find(n => n.data._type === 'start');
@@ -159,15 +315,26 @@ function App() {
       try {
         const json = JSON.parse(ev.target?.result as string);
         const { nodes: newNodes, edges: newEdges } = dialogToFlow(json as Dialogs);
-        setNodes(newNodes);
-        setEdges(newEdges);
+
+        if (json._aiVoice) {
+          if (aiMode) {
+            setNodes(applyAiVoiceToNodes(newNodes, json._aiVoice));
+            setEdges(newEdges);
+          } else {
+            setPendingFileLoad({ nodes: newNodes, edges: newEdges, aiVoice: json._aiVoice });
+            setShowAiModal(true);
+          }
+        } else {
+          setNodes(newNodes);
+          setEdges(newEdges);
+        }
       } catch (err) {
         alert('Failed to load file: ' + (err instanceof Error ? err.message : 'Invalid JSON'));
       }
     };
     reader.readAsText(file);
     e.target.value = '';
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, aiMode, setCharacters, setVoiceGenerations]);
 
   const handleSaveWip = useCallback(() => {
     const savedAt = new Date().toISOString();
@@ -202,52 +369,85 @@ function App() {
     setWipSavedAt(null);
   }, []);
 
+  const exportLabel = aiMode && voiceGenerations.size > 0 ? 'Export ZIP' : 'Export JSON';
+
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="app-title">
-          <h1>WL Dialog Generator</h1>
-        </div>
-        <div className="app-toolbar">
-          <button className="toolbar-btn" onClick={handleAddStart}>+ Start</button>
-          <button className="toolbar-btn" onClick={handleAddNpcLine}>+ NPC Line</button>
-          <button className="toolbar-btn" onClick={handleAddPlayerChoice}>+ Player Choice</button>
-          <button className="toolbar-btn" onClick={handleOrganizeNodes}>Organize Nodes</button>
-          <div className="save-load-wrapper" ref={saveLoadWrapperRef}>
-            <button className="toolbar-btn" onClick={() => setMenuOpen(o => !o)}>Save/Load</button>
-            {menuOpen && (
-              <SaveLoadMenu
-                onLoadFile={() => fileInputRef.current?.click()}
-                onSaveWip={handleSaveWip}
-                onLoadWip={handleLoadWip}
-                onClearWip={handleClearWip}
-                wipSavedAt={wipSavedAt}
-                onClose={() => setMenuOpen(false)}
-              />
-            )}
+    <AiVoiceContext.Provider value={{
+      aiMode,
+      characters,
+      voiceGenerations,
+      generatingNodes,
+      onGenerateVoice: handleGenerateVoice,
+      onPlayVoice: handlePlayVoice,
+      onUnassignCharacter: handleUnassignCharacter,
+    }}>
+      <div className="app">
+        <header className="app-header">
+          <div className="app-title">
+            <h1>WL Dialog Generator</h1>
           </div>
-          <button className="toolbar-btn toolbar-btn-primary" onClick={handleExport} disabled={errors.length > 0}>Export JSON</button>
-        </div>
-      </header>
-      <main className="app-main">
-        <DialogEditor
-          nodes={nodes}
-          onNodesChange={onNodesChange}
-          edges={edges}
-          setEdges={setEdges}
-          onEdgesChange={onEdgesChange}
-          onRegisterGetCenter={handleRegisterGetCenter}
+          <div className="app-toolbar">
+            <button className="toolbar-btn" onClick={handleAddStart}>+ Start</button>
+            <button className="toolbar-btn" onClick={handleAddNpcLine}>+ NPC Line</button>
+            <button className="toolbar-btn" onClick={handleAddPlayerChoice}>+ Player Choice</button>
+            <button className="toolbar-btn" onClick={handleOrganizeNodes}>Organize Nodes</button>
+            <div className="save-load-wrapper" ref={saveLoadWrapperRef}>
+              <button className="toolbar-btn" onClick={() => setMenuOpen(o => !o)}>Save/Load</button>
+              {menuOpen && (
+                <SaveLoadMenu
+                  onLoadFile={() => fileInputRef.current?.click()}
+                  onSaveWip={handleSaveWip}
+                  onLoadWip={handleLoadWip}
+                  onClearWip={handleClearWip}
+                  wipSavedAt={wipSavedAt}
+                  onClose={() => setMenuOpen(false)}
+                />
+              )}
+            </div>
+            {aiMode ? (
+              <button className="toolbar-btn ai-btn ai-btn-active" onClick={handleDisableAiMode} title="Click to deactivate AI Voice Mode">
+                AI Voice: ON
+              </button>
+            ) : (
+              <button className="toolbar-btn ai-btn" onClick={() => setShowAiModal(true)}>
+                AI Voice
+              </button>
+            )}
+            <button className="toolbar-btn toolbar-btn-primary" onClick={handleExport} disabled={errors.length > 0}>{exportLabel}</button>
+          </div>
+        </header>
+        <main className={`app-main${aiMode ? ' app-main-ai' : ''}`}>
+          {aiMode && (
+            <CharacterPanel
+              onAddCharacter={() => setShowAddCharModal(true)}
+              onRemoveCharacter={handleRemoveCharacter}
+            />
+          )}
+          <DialogEditor
+            nodes={nodes}
+            onNodesChange={onNodesChange}
+            edges={edges}
+            setEdges={setEdges}
+            onEdgesChange={onEdgesChange}
+            onRegisterGetCenter={handleRegisterGetCenter}
+          />
+        </main>
+        <ErrorPanel errors={errors} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={handleLoadFile}
         />
-      </main>
-      <ErrorPanel errors={errors} />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        style={{ display: 'none' }}
-        onChange={handleLoadFile}
-      />
-    </div>
+        {showAiModal && (
+          <AiVoiceModal onConfirm={handleEnableAiMode} onCancel={handleAiModalCancel} />
+        )}
+        {showAddCharModal && aiMode && (
+          <AddCharacterModal onConfirm={handleAddCharacter} onCancel={() => setShowAddCharModal(false)} />
+        )}
+      </div>
+    </AiVoiceContext.Provider>
   );
 }
 

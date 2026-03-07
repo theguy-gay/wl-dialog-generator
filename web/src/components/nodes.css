@@ -264,3 +264,128 @@
 .node-field-help:hover::after {
   opacity: 1;
 }
+
+/* AI Voice section within NPC line nodes */
+.ai-voice-section {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #1a2d40;
+}
+
+.voice-drop-zone {
+  border: 1px dashed #4a3a6a;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: #664a88;
+  text-align: center;
+  cursor: default;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.voice-drop-zone-over {
+  border-color: #a855f7;
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.08);
+}
+
+.character-badge-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.character-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.character-badge-name {
+  flex: 1;
+  font-weight: 600;
+  color: #c084fc;
+}
+
+.character-badge-remove {
+  background: none;
+  border: none;
+  color: #664a88;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.character-badge-remove:hover {
+  color: #e94560;
+}
+
+.ai-voice-controls {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+
+.voice-generate-btn {
+  flex: 1;
+  padding: 5px 10px;
+  background: #0f1923;
+  border: 1px solid #a855f7;
+  color: #a855f7;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: background 0.15s;
+}
+
+.voice-generate-btn:hover:not(:disabled) {
+  background: #a855f7;
+  color: #fff;
+}
+
+.voice-generate-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.voice-play-btn {
+  padding: 5px 10px;
+  background: #0f1923;
+  border: 1px solid #22d3ee;
+  color: #22d3ee;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: background 0.15s;
+}
+
+.voice-play-btn:hover {
+  background: #22d3ee;
+  color: #000;
+}
+
+.voice-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(168, 85, 247, 0.3);
+  border-top-color: #a855f7;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
