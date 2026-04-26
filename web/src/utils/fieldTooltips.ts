@@ -8,6 +8,7 @@ export const tooltips = {
   camera: 'Name of a Camera to be possessed during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.',
   hidableGroup: 'Group that will be unhidden during the dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.',
   triggers: 'Label of another NPCLine or PlayerChoice that should be played upon completion of this NPC line. If empty, ends the dialog.',
+  completionEvent: 'Name of a game event to dispatch when this NPC line completes, fired alongside any triggers.',
 
   // Camera
   keepPossessed: 'Determines if the camera should stay possessed after the dialog.',

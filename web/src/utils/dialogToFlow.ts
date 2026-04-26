@@ -105,6 +105,7 @@ export function dialogToFlow(dialogs: Dialogs): DialogFlowResult {
     if (line.animation !== undefined) data.animation = line.animation;
     if (line.camera !== undefined) data.camera = line.camera;
     if (line.hidableGroup !== undefined) data.hidableGroup = line.hidableGroup;
+    if (line.completionEvent !== undefined) data.completionEvent = line.completionEvent;
 
     nodes.push({
       id: `npcLine-${label}`,

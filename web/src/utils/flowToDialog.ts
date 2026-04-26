@@ -53,6 +53,7 @@ export function flowToDialog(nodes: Node[], edges: Edge[]): Dialogs {
       if (data.animation !== undefined) line.animation = data.animation as string | CharacterAnimation;
       if (data.camera !== undefined) line.camera = data.camera as Camera;
       if (data.hidableGroup !== undefined) line.hidableGroup = data.hidableGroup as HidableGroup;
+      if (data.completionEvent !== undefined) line.completionEvent = data.completionEvent as string;
 
       // Derive triggers from outgoing edges
       const outEdges = outgoingEdges.get(node.id) ?? [];

@@ -32,6 +32,7 @@ export interface NPCLine {
   camera?: Camera;
   hidableGroup?: HidableGroup;
   triggers?: string | string[];
+  completionEvent?: string;
 }
 
 export interface PlayerChoice {

@@ -16,6 +16,7 @@ export interface NPCLine {
     camera?: Camera, // Name of a Camera to be possessed during this dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
     hidableGroup?: HidableGroup, // Group that will be unhidden during the dialog. If one is in the scene with the same name, it is used and left unchanged. If one does not exist, one will be created with the name.
     triggers?: string | string[], // Label of another NPCLine or PlayerChoice that should be played upon completion of this NPC line. If empty, ends the dialog.
+    completionEvent?: string, // Name of a game event to dispatch when this NPC line completes, fired alongside any triggers.
 }
 
 export interface PlayerChoice {

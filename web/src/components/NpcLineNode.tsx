@@ -404,6 +404,29 @@ export function NpcLineNode({ id, data }: NodeProps) {
           >+ Hidable Group</button>
         )}
 
+        {/* Completion Event — optional */}
+        {data.completionEvent !== undefined ? (
+          <div className="node-field">
+            <FieldLabel tooltip={tooltips.completionEvent}>Completion Event</FieldLabel>
+            <input
+              className="nodrag"
+              type="text"
+              value={data.completionEvent as string}
+              onChange={e => updateNodeData(id, { completionEvent: e.target.value || undefined })}
+            />
+            <button
+              className="node-icon-btn nodrag"
+              onClick={() => updateNodeData(id, { completionEvent: undefined })}
+            >×</button>
+          </div>
+        ) : (
+          <button
+            className="node-add-btn nodrag"
+            data-tooltip={tooltips.completionEvent}
+            onClick={() => updateNodeData(id, { completionEvent: '' })}
+          >+ Completion Event</button>
+        )}
+
         {/* Triggers — optional */}
         {triggersOpen ? (
           <div className="node-field node-choice-row">

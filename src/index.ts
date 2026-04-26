@@ -188,6 +188,7 @@ const generateWLNPCLine = (lineName: string, npcLine: NPCLine) => {
     const npcLineGroup = spawnObjectUnderParent("Group", `${lineName}NPCLine`, rootDialogGroup);
     const onStartEvents: NPCLineEvent[] = [];
     const onEndEvents: NPCLineEvent[] = npcLine.triggers ?  [{ name: getTriggerEventFromName(npcLine.triggers) }] : [];
+    if (npcLine.completionEvent) onEndEvents.push({ name: npcLine.completionEvent });
     npcLine.text && generateNPCLineSubtitle(lineName, npcLine.text)(onStartEvents, onEndEvents);
     npcLine.media && generateNPCLineMediaPlayerOrRandomMediaPlayer(lineName, npcLineGroup, npcLine.media)(onStartEvents, onEndEvents);
     npcLine.animation && generateNPCLineAnimationSequence(lineName, npcLineGroup, npcLine.animation, npcLine.duration)(onStartEvents, onEndEvents);
