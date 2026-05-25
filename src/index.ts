@@ -30,6 +30,7 @@ rootDialogGroup = wl_editor_spawn_prop("Group", "GeneratedDialogGroup");
 if (!rootDialogGroup) {
     throw `Failed to create root group`
 }
+wl_set_object_parent(rootDialogGroup, wl_get_object_self_parent());
 const uiLayer = spawnObjectUnderParent("UILayer", "GeneratedDialogUILayer", rootDialogGroup);
 
 const generateNPCLineSubtitle = (lineName: string, text: string): NPCLineEventPopulator  => {
