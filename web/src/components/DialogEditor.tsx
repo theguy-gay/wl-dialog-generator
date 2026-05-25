@@ -72,12 +72,15 @@ function DialogEditor({ nodes, onNodesChange, edges, setEdges, onEdgesChange, on
   const onConnect = useCallback(
     (connection: Connection) => {
       setEdges(eds => {
-        let data: Record<string, unknown> = { color: pickEdgeColor(eds.length) };
+        const filtered = eds.filter(
+          e => !(e.source === connection.source && e.sourceHandle === connection.sourceHandle)
+        );
+        let data: Record<string, unknown> = { color: pickEdgeColor(filtered.length) };
         if (connection.sourceHandle?.startsWith('choice-')) {
           const idx = parseInt(connection.sourceHandle.slice('choice-'.length), 10);
           if (!isNaN(idx)) data = { ...data, choiceIndex: idx };
         }
-        return addEdge({ ...connection, data }, eds);
+        return addEdge({ ...connection, data }, filtered);
       });
     },
     [setEdges]
