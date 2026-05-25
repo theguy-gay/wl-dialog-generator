@@ -22,7 +22,7 @@ const spawnObjectUnderParent = (propType: string, name: string, parent: WildLife
 let rootDialogGroup;
 if (dialogs.replace) {
     rootDialogGroup = wl_get_object("GeneratedDialogGroup");
-    if (rootDialogGroup) {
+    if (rootDialogGroup !== undefined) {
         wl_editor_delete_object(rootDialogGroup);
     }
 }
@@ -188,7 +188,9 @@ const generateNPCLineEventFunction = (lineName: string, parent: WildLife.Sandbox
 const generateWLNPCLine = (lineName: string, npcLine: NPCLine) => {
     const npcLineGroup = spawnObjectUnderParent("Group", `${lineName}NPCLine`, rootDialogGroup);
     const onStartEvents: NPCLineEvent[] = [];
-    const onEndEvents: NPCLineEvent[] = npcLine.triggers ?  [{ name: getTriggerEventFromName(npcLine.triggers) }] : [];
+    const onEndEvents: NPCLineEvent[] = npcLine.triggers
+        ? (Array.isArray(npcLine.triggers) ? npcLine.triggers : [npcLine.triggers]).map(t => ({ name: getTriggerEventFromName(t) }))
+        : [];
     if (npcLine.completionEvent) onEndEvents.push({ name: npcLine.completionEvent });
     npcLine.text && generateNPCLineSubtitle(lineName, npcLine.text)(onStartEvents, onEndEvents);
     npcLine.media && generateNPCLineMediaPlayerOrRandomMediaPlayer(lineName, npcLineGroup, npcLine.media)(onStartEvents, onEndEvents);
