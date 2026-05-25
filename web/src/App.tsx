@@ -49,6 +49,7 @@ function findFreePosition(center: { x: number; y: number }, nodes: Node[]): { x:
 import DialogEditor from './components/DialogEditor';
 import { ErrorPanel } from './components/ErrorPanel';
 import { SaveLoadMenu } from './components/SaveLoadMenu';
+import type { SavedWorkflow } from './components/SaveLoadMenu';
 import type { Dialogs, AiVoiceMetadata } from './types';
 import { dialogToFlow, computeTreeLayout } from './utils/dialogToFlow';
 import { flowToDialog } from './utils/flowToDialog';
@@ -57,6 +58,7 @@ import './App.css';
 import dialogsJson from '../../dialogs.json';
 
 const WIP_KEY = 'wl-dialog-wip';
+const WORKFLOWS_KEY = 'wl-dialog-workflows';
 
 const { nodes: initialNodes, edges: initialEdges } =
   dialogToFlow(dialogsJson as Dialogs);
@@ -69,6 +71,15 @@ function App() {
     const saved = localStorage.getItem(WIP_KEY);
     if (!saved) return null;
     try { return JSON.parse(saved).savedAt ?? null; } catch { return null; }
+  });
+
+  const [savedWorkflows, setSavedWorkflows] = useState<SavedWorkflow[]>(() => {
+    try {
+      const raw = localStorage.getItem(WORKFLOWS_KEY);
+      if (!raw) return [];
+      return (JSON.parse(raw) as Array<SavedWorkflow & { nodes: unknown; edges: unknown }>)
+        .map(({ id, name, savedAt }) => ({ id, name, savedAt }));
+    } catch { return []; }
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -369,6 +380,46 @@ function App() {
     setWipSavedAt(null);
   }, []);
 
+  const handleSaveAs = useCallback((name: string) => {
+    const id = `wf-${Date.now()}`;
+    const savedAt = new Date().toISOString();
+    const existing: Array<SavedWorkflow & { nodes: Node[]; edges: Edge[] }> = (() => {
+      try {
+        const raw = localStorage.getItem(WORKFLOWS_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch { return []; }
+    })();
+    const updated = [{ id, name, savedAt, nodes, edges }, ...existing];
+    localStorage.setItem(WORKFLOWS_KEY, JSON.stringify(updated));
+    setSavedWorkflows(updated.map(({ id, name, savedAt }) => ({ id, name, savedAt })));
+  }, [nodes, edges]);
+
+  const handleLoadWorkflow = useCallback((id: string) => {
+    try {
+      const raw = localStorage.getItem(WORKFLOWS_KEY);
+      if (!raw) return;
+      const all: Array<SavedWorkflow & { nodes: Node[]; edges: Edge[] }> = JSON.parse(raw);
+      const wf = all.find(w => w.id === id);
+      if (!wf) return;
+      setNodes(wf.nodes);
+      setEdges(wf.edges);
+    } catch (err) {
+      alert('Failed to load workflow: ' + (err instanceof Error ? err.message : 'Invalid data'));
+    }
+  }, [setNodes, setEdges]);
+
+  const handleDeleteWorkflow = useCallback((id: string) => {
+    try {
+      const raw = localStorage.getItem(WORKFLOWS_KEY);
+      const all: Array<SavedWorkflow & { nodes: Node[]; edges: Edge[] }> = raw ? JSON.parse(raw) : [];
+      const updated = all.filter(w => w.id !== id);
+      localStorage.setItem(WORKFLOWS_KEY, JSON.stringify(updated));
+      setSavedWorkflows(updated.map(({ id, name, savedAt }) => ({ id, name, savedAt })));
+    } catch (err) {
+      console.error('Failed to delete workflow', err);
+    }
+  }, []);
+
   const exportLabel = aiMode && voiceGenerations.size > 0 ? 'Export ZIP' : 'Export JSON';
 
   return (
@@ -400,6 +451,10 @@ function App() {
                   onLoadWip={handleLoadWip}
                   onClearWip={handleClearWip}
                   wipSavedAt={wipSavedAt}
+                  savedWorkflows={savedWorkflows}
+                  onSaveAs={handleSaveAs}
+                  onLoadWorkflow={handleLoadWorkflow}
+                  onDeleteWorkflow={handleDeleteWorkflow}
                   onClose={() => setMenuOpen(false)}
                 />
               )}
