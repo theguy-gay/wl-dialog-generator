@@ -1,4 +1,5 @@
 import { SubBox } from './SubBox';
+import { NodeInput } from './NodeInput';
 
 interface StringArrayFieldProps {
   label: string;
@@ -24,11 +25,11 @@ export function StringArrayField({ label, tooltip, values, onChange }: StringArr
     <SubBox label={label} tooltip={tooltip} onAdd={add}>
       {values.map((v, i) => (
         <div className="node-array-entry" key={i}>
-          <input
+          <NodeInput
             className="nodrag"
             type="text"
             value={v}
-            onChange={e => update(i, e.target.value)}
+            onChange={val => update(i, val)}
           />
           <button className="node-icon-btn nodrag" onClick={() => remove(i)} title="Remove">×</button>
         </div>

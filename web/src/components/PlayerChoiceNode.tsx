@@ -9,6 +9,7 @@ import { useRenameNode } from '../hooks/useRenameNode';
 import { SubBox } from './SubBox';
 import { SortableArrayItem } from './SortableArrayItem';
 import { fixChoiceEdgesOnRemove, fixChoiceEdgesOnReorder } from '../utils/fixChoiceEdges';
+import { NodeInput } from './NodeInput';
 
 export function PlayerChoiceNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements, setEdges } = useReactFlow();
@@ -72,11 +73,11 @@ export function PlayerChoiceNode({ id, data }: NodeProps) {
                 return (
                   <SortableArrayItem key={`choice-item-${i}`} id={`choice-item-${i}`} className="node-choice-row">
                     <label>Choice {i + 1}</label>
-                    <input
+                    <NodeInput
                       className="nodrag"
                       type="text"
                       value={choice.text}
-                      onChange={e => onChoiceTextChange(i, e.target.value)}
+                      onChange={v => onChoiceTextChange(i, v)}
                     />
                     <button
                       className="node-icon-btn nodrag"

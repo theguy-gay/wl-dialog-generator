@@ -14,6 +14,7 @@ import { tooltips } from '../utils/fieldTooltips';
 import { SortableArrayItem, SortableSubBoxWrapper } from './SortableArrayItem';
 import { useAiVoice } from '../context/AiVoiceContext';
 import { AiVoiceSection } from './AiVoiceSection';
+import { NodeInput } from './NodeInput';
 
 export function NpcLineNode({ id, data }: NodeProps) {
   const { updateNodeData, deleteElements, setEdges, getEdges } = useReactFlow();
@@ -119,11 +120,11 @@ export function NpcLineNode({ id, data }: NodeProps) {
         {data.text !== undefined ? (
           <div className="node-field">
             <FieldLabel tooltip={tooltips.text}>Text</FieldLabel>
-            <input
+            <NodeInput
               className="nodrag"
               type="text"
               value={data.text as string}
-              onChange={e => updateNodeData(id, { text: e.target.value || undefined })}
+              onChange={v => updateNodeData(id, { text: v || undefined })}
             />
             <button
               className="node-icon-btn nodrag"
@@ -173,12 +174,12 @@ export function NpcLineNode({ id, data }: NodeProps) {
               <SortableContext items={mediaArr.map((_, i) => `media-${i}`)} strategy={verticalListSortingStrategy}>
                 {mediaArr.map((v, i) => (
                   <SortableArrayItem key={`media-${i}`} id={`media-${i}`}>
-                    <input
+                    <NodeInput
                       className="nodrag"
                       type="text"
                       value={v}
-                      onChange={e => {
-                        const next = mediaArr.map((m, idx) => idx === i ? e.target.value : m);
+                      onChange={val => {
+                        const next = mediaArr.map((m, idx) => idx === i ? val : m);
                         updateNodeData(id, { media: next.length ? next : undefined });
                       }}
                     />
@@ -234,12 +235,12 @@ export function NpcLineNode({ id, data }: NodeProps) {
             {animMode === 'string' && (
               <div className="node-field">
                 <label></label>
-                <input
+                <NodeInput
                   className="nodrag"
                   type="text"
                   placeholder="animation name"
                   value={typeof data.animation === 'string' ? data.animation : ''}
-                  onChange={e => updateNodeData(id, { animation: e.target.value || undefined })}
+                  onChange={v => updateNodeData(id, { animation: v || undefined })}
                 />
               </div>
             )}
@@ -248,20 +249,20 @@ export function NpcLineNode({ id, data }: NodeProps) {
               <SubBox label="Character Animation">
                 <div className="node-field">
                   <label>Name</label>
-                  <input
+                  <NodeInput
                     className="nodrag"
                     type="text"
                     value={anim.name}
-                    onChange={e => updateAnim({ name: e.target.value })}
+                    onChange={v => updateAnim({ name: v })}
                   />
                 </div>
                 <div className="node-field">
                   <label>Pose Prop Name</label>
-                  <input
+                  <NodeInput
                     className="nodrag"
                     type="text"
                     value={anim.posePropName}
-                    onChange={e => updateAnim({ posePropName: e.target.value })}
+                    onChange={v => updateAnim({ posePropName: v })}
                   />
                 </div>
                 <div className="node-field">
@@ -341,12 +342,12 @@ export function NpcLineNode({ id, data }: NodeProps) {
           <SubBox label="Camera" tooltip={tooltips.camera} onRemove={() => updateNodeData(id, { camera: undefined })}>
             <div className="node-field">
               <label>Name</label>
-              <input
+              <NodeInput
                 className="nodrag"
                 type="text"
                 value={camera.name}
-                onChange={e => updateNodeData(id, {
-                  camera: { name: e.target.value, keepPossessed: camera.keepPossessed },
+                onChange={v => updateNodeData(id, {
+                  camera: { name: v, keepPossessed: camera.keepPossessed },
                 })}
               />
             </div>
@@ -375,12 +376,12 @@ export function NpcLineNode({ id, data }: NodeProps) {
           <SubBox label="Hidable Group" tooltip={tooltips.hidableGroup} onRemove={() => updateNodeData(id, { hidableGroup: undefined })}>
             <div className="node-field">
               <label>Name</label>
-              <input
+              <NodeInput
                 className="nodrag"
                 type="text"
                 value={hidableGroup.name}
-                onChange={e => updateNodeData(id, {
-                  hidableGroup: { name: e.target.value, rehide: hidableGroup.rehide },
+                onChange={v => updateNodeData(id, {
+                  hidableGroup: { name: v, rehide: hidableGroup.rehide },
                 })}
               />
             </div>
@@ -408,11 +409,11 @@ export function NpcLineNode({ id, data }: NodeProps) {
         {data.completionEvent !== undefined ? (
           <div className="node-field">
             <FieldLabel tooltip={tooltips.completionEvent}>Completion Event</FieldLabel>
-            <input
+            <NodeInput
               className="nodrag"
               type="text"
               value={data.completionEvent as string}
-              onChange={e => updateNodeData(id, { completionEvent: e.target.value || undefined })}
+              onChange={v => updateNodeData(id, { completionEvent: v || undefined })}
             />
             <button
               className="node-icon-btn nodrag"
