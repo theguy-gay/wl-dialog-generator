@@ -419,13 +419,14 @@ body {
 
 .menu-item-has-sub {
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  cursor: default;
   user-select: none;
 }
 
-.menu-item-has-sub:hover {
+.menu-item-has-sub:hover,
+.menu-item-sub-open {
   background: #1e2a3a;
 }
 
@@ -437,7 +438,7 @@ body {
 
 .save-load-submenu {
   position: absolute;
-  left: 100%;
+  right: 100%;
   top: 0;
   background: #16213e;
   border: 1px solid #2a3a4a;
@@ -503,12 +504,12 @@ body {
 }
 
 .submenu-item-delete {
+  display: flex;
+  align-items: center;
   background: none;
   border: none;
-  color: #444;
+  color: #555;
   cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
   padding: 4px 10px 4px 4px;
   flex-shrink: 0;
 }
