@@ -381,17 +381,26 @@ function App() {
   }, []);
 
   const handleSaveAs = useCallback((name: string) => {
-    const id = `wf-${Date.now()}`;
-    const savedAt = new Date().toISOString();
     const existing: Array<SavedWorkflow & { nodes: Node[]; edges: Edge[] }> = (() => {
       try {
         const raw = localStorage.getItem(WORKFLOWS_KEY);
         return raw ? JSON.parse(raw) : [];
       } catch { return []; }
     })();
-    const updated = [{ id, name, savedAt, nodes, edges }, ...existing];
+
+    const dup = existing.find(w => w.name === name);
+    if (dup && !confirm(`A workflow named "${name}" already exists. Overwrite it?`)) {
+      return false;
+    }
+
+    const savedAt = new Date().toISOString();
+    const updated = dup
+      ? existing.map(w => (w.id === dup.id ? { ...w, savedAt, nodes, edges } : w))
+      : [{ id: `wf-${Date.now()}`, name, savedAt, nodes, edges }, ...existing];
+
     localStorage.setItem(WORKFLOWS_KEY, JSON.stringify(updated));
     setSavedWorkflows(updated.map(({ id, name, savedAt }) => ({ id, name, savedAt })));
+    return true;
   }, [nodes, edges]);
 
   const handleLoadWorkflow = useCallback((id: string) => {

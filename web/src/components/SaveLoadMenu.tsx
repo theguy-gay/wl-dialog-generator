@@ -13,7 +13,7 @@ interface Props {
   onClearWip: () => void;
   wipSavedAt: string | null;
   savedWorkflows: SavedWorkflow[];
-  onSaveAs: (name: string) => void;
+  onSaveAs: (name: string) => boolean;
   onLoadWorkflow: (id: string) => void;
   onDeleteWorkflow: (id: string) => void;
   onClose: () => void;
@@ -46,7 +46,7 @@ export function SaveLoadMenu({
   function handleSaveAsConfirm() {
     const name = saveAsName.trim();
     if (!name) return;
-    onSaveAs(name);
+    if (!onSaveAs(name)) return;
     setSavingAs(false);
     onClose();
   }
